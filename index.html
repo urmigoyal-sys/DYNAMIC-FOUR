@@ -1,0 +1,2752 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>LIFECRAFT – MONEYVERSE | VR Financial Literacy Simulation</title>
+  
+  <!-- A-Frame Library (WebXR & VR for Meta Quest 3S & Desktop) -->
+  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+
+  <style>
+    /* Global Reset & Futuristic Financial Styling */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    body, html {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #0b0f19;
+      color: #f8fafc;
+    }
+
+    /* Screen UI Overlay Layer (Visible on Desktop & Mirrored in Headset) */
+    #ui-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 100;
+      pointer-events: none;
+    }
+
+    .interactive {
+      pointer-events: auto;
+    }
+
+    /* Top Desktop Persistent HUD Bar */
+    #hud-bar {
+      position: absolute;
+      top: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      background: rgba(15, 23, 42, 0.88);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(59, 130, 246, 0.4);
+      border-radius: 9999px;
+      padding: 10px 24px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 20px rgba(59, 130, 246, 0.2);
+      transition: all 0.3s ease;
+    }
+
+    .hud-chip {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .hud-label {
+      color: #94a3b8;
+      text-transform: uppercase;
+      font-size: 11px;
+      letter-spacing: 0.8px;
+    }
+
+    .hud-value {
+      font-size: 17px;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+    }
+
+    .val-budget { color: #38bdf8; }
+    .val-balance { color: #10b981; }
+    .val-spent { color: #f43f5e; }
+    .val-saved { color: #f59e0b; }
+    .val-cart { color: #a855f7; }
+
+    .hud-divider {
+      width: 1px;
+      height: 24px;
+      background: rgba(255, 255, 255, 0.15);
+    }
+
+    /* Action Buttons in HUD */
+    .hud-btn {
+      background: linear-gradient(135deg, #2563eb, #1d4ed8);
+      color: #ffffff;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+      transition: all 0.2s;
+    }
+
+    .hud-btn:hover {
+      background: linear-gradient(135deg, #3b82f6, #2563eb);
+      transform: translateY(-1px);
+    }
+
+    .hud-btn-cart {
+      background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+      box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
+    }
+    .hud-btn-cart:hover {
+      background: linear-gradient(135deg, #a78bfa, #8b5cf6);
+    }
+
+    /* Desktop Controls Helper */
+    #desktop-controls-hint {
+      position: absolute;
+      bottom: 16px;
+      left: 16px;
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 12px 18px;
+      font-size: 12px;
+      line-height: 1.6;
+      color: #cbd5e1;
+      backdrop-filter: blur(8px);
+    }
+    #desktop-controls-hint strong {
+      color: #38bdf8;
+    }
+
+    /* Quest 3S VR Guide Hint */
+    #vr-instructions-hint {
+      position: absolute;
+      bottom: 16px;
+      right: 16px;
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      border-radius: 12px;
+      padding: 12px 18px;
+      font-size: 12px;
+      line-height: 1.6;
+      color: #cbd5e1;
+      text-align: right;
+      backdrop-filter: blur(8px);
+    }
+    #vr-instructions-hint strong {
+      color: #10b981;
+    }
+
+    /* Modal Popups Overlay (Intro, Cart, Quizzes, Emergencies, Report) */
+    .modal-backdrop {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(7, 11, 22, 0.82);
+      backdrop-filter: blur(10px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.35s ease;
+    }
+
+    .modal-backdrop.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-card {
+      background: #111827;
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      border-radius: 24px;
+      width: 90%;
+      max-width: 680px;
+      max-height: 85vh;
+      overflow-y: auto;
+      padding: 36px;
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8), 0 0 40px rgba(37, 99, 235, 0.25);
+      transform: translateY(20px) scale(0.97);
+      transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      position: relative;
+    }
+
+    .modal-backdrop.active .modal-card {
+      transform: translateY(0) scale(1);
+    }
+
+    /* Close Button */
+    .modal-close {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background: rgba(255, 255, 255, 0.1);
+      border: none;
+      color: #94a3b8;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      transition: all 0.2s;
+    }
+    .modal-close:hover {
+      background: rgba(255, 255, 255, 0.2);
+      color: #fff;
+    }
+
+    /* Modal Typography */
+    .modal-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: 9999px;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      margin-bottom: 12px;
+    }
+    .badge-primary { background: rgba(59, 130, 246, 0.2); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.4); }
+    .badge-warning { background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4); }
+    .badge-danger { background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); }
+    .badge-success { background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4); }
+
+    .modal-title {
+      font-size: 28px;
+      font-weight: 800;
+      color: #ffffff;
+      margin-bottom: 8px;
+      line-height: 1.2;
+    }
+
+    .modal-subtitle {
+      font-size: 15px;
+      color: #94a3b8;
+      margin-bottom: 24px;
+      line-height: 1.5;
+    }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 14px 28px;
+      border-radius: 14px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s;
+      text-decoration: none;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #2563eb, #1d4ed8);
+      color: #ffffff;
+      box-shadow: 0 8px 24px rgba(37, 99, 235, 0.45);
+    }
+    .btn-primary:hover {
+      background: linear-gradient(135deg, #3b82f6, #2563eb);
+      transform: translateY(-2px);
+      box-shadow: 0 12px 28px rgba(37, 99, 235, 0.6);
+    }
+
+    .btn-success {
+      background: linear-gradient(135deg, #059669, #047857);
+      color: #ffffff;
+      box-shadow: 0 8px 24px rgba(16, 185, 129, 0.4);
+    }
+    .btn-success:hover {
+      background: linear-gradient(135deg, #10b981, #059669);
+      transform: translateY(-2px);
+    }
+
+    .btn-danger {
+      background: linear-gradient(135deg, #dc2626, #b91c1c);
+      color: #ffffff;
+      box-shadow: 0 8px 24px rgba(239, 68, 68, 0.4);
+    }
+    .btn-danger:hover {
+      background: linear-gradient(135deg, #ef4444, #dc2626);
+      transform: translateY(-2px);
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.1);
+      color: #e2e8f0;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+    }
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.18);
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 14px;
+      margin-top: 24px;
+      flex-wrap: wrap;
+    }
+
+    /* AI Guide Character Box */
+    .ai-guide-box {
+      display: flex;
+      gap: 16px;
+      background: rgba(30, 41, 59, 0.7);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      border-radius: 18px;
+      padding: 18px;
+      margin-bottom: 24px;
+      align-items: flex-start;
+    }
+
+    .ai-avatar {
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #0284c7, #38bdf8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 26px;
+      flex-shrink: 0;
+      box-shadow: 0 0 20px rgba(56, 189, 248, 0.5);
+      border: 2px solid #e0f2fe;
+    }
+
+    .ai-speech {
+      font-size: 14px;
+      line-height: 1.6;
+      color: #e2e8f0;
+    }
+    .ai-speech strong {
+      color: #38bdf8;
+    }
+
+    /* Welcome Modal Custom Elements */
+    .hero-stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      margin: 20px 0 28px 0;
+    }
+
+    .hero-stat-card {
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 14px;
+      padding: 14px;
+      text-align: center;
+    }
+    .hero-stat-label {
+      font-size: 11px;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+    .hero-stat-value {
+      font-size: 20px;
+      font-weight: 800;
+      color: #38bdf8;
+    }
+
+    /* Cart Modal List */
+    .cart-items-list {
+      max-height: 280px;
+      overflow-y: auto;
+      margin-bottom: 20px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 14px;
+      background: rgba(15, 23, 42, 0.5);
+    }
+
+    .cart-item-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    .cart-item-row:last-child {
+      border-bottom: none;
+    }
+
+    .cart-item-name {
+      font-weight: 600;
+      color: #f1f5f9;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .cart-item-badge {
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+    .badge-need { background: #065f46; color: #6ee7b7; }
+    .badge-want { background: #831843; color: #f472b6; }
+
+    .cart-item-price {
+      font-weight: 700;
+      color: #10b981;
+      font-size: 15px;
+    }
+
+    .btn-remove-item {
+      background: rgba(239, 68, 68, 0.2);
+      border: 1px solid rgba(239, 68, 68, 0.4);
+      color: #fca5a5;
+      padding: 4px 10px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+    .btn-remove-item:hover {
+      background: rgba(239, 68, 68, 0.4);
+      color: #fff;
+    }
+
+    /* Toast Notification for VR & Desktop */
+    #toast-msg {
+      position: absolute;
+      top: 90px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-20px);
+      background: rgba(15, 23, 42, 0.95);
+      border: 1px solid #38bdf8;
+      border-radius: 12px;
+      padding: 12px 24px;
+      color: #ffffff;
+      font-weight: 600;
+      font-size: 14px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.6), 0 0 20px rgba(56, 189, 248, 0.3);
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      z-index: 500;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    #toast-msg.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+    #toast-msg.toast-danger {
+      border-color: #ef4444;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.6), 0 0 20px rgba(239, 68, 68, 0.4);
+    }
+    #toast-msg.toast-success {
+      border-color: #10b981;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.6), 0 0 20px rgba(16, 185, 129, 0.4);
+    }
+
+    /* Report Dashboard Styling */
+    .report-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .report-score-box {
+      grid-column: span 2;
+      background: linear-gradient(135deg, rgba(30, 58, 138, 0.5), rgba(15, 23, 42, 0.8));
+      border: 1px solid rgba(59, 130, 246, 0.4);
+      border-radius: 18px;
+      padding: 24px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .score-circle-wrapper {
+      display: inline-block;
+      margin: 12px auto;
+      position: relative;
+    }
+
+    .report-score-val {
+      font-size: 48px;
+      font-weight: 900;
+      color: #38bdf8;
+      text-shadow: 0 0 25px rgba(56, 189, 248, 0.5);
+    }
+
+    .report-tier-badge {
+      display: inline-block;
+      padding: 6px 18px;
+      border-radius: 9999px;
+      font-size: 15px;
+      font-weight: 800;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      margin-top: 8px;
+    }
+
+    .metric-bar-group {
+      margin-bottom: 14px;
+    }
+
+    .metric-info {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .metric-track {
+      width: 100%;
+      height: 8px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .metric-fill {
+      height: 100%;
+      border-radius: 4px;
+      transition: width 1s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .tips-card {
+      background: rgba(30, 41, 59, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 16px;
+      padding: 18px;
+      margin-bottom: 20px;
+    }
+    .tips-card h4 {
+      color: #f59e0b;
+      font-size: 14px;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .tips-card ul {
+      padding-left: 18px;
+      font-size: 13px;
+      line-height: 1.7;
+      color: #cbd5e1;
+    }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(0, 0, 0, 0.2);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 3px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Screen UI Overlay Container -->
+  <div id="ui-container">
+    
+    <!-- Top HUD Bar -->
+    <div id="hud-bar" class="interactive">
+      <div class="hud-chip">
+        <span class="hud-label">Budget</span>
+        <span class="hud-value val-budget">₹10,000</span>
+      </div>
+      <div class="hud-divider"></div>
+      <div class="hud-chip">
+        <span class="hud-label">Balance</span>
+        <span class="hud-value val-balance" id="hud-balance">₹10,000</span>
+      </div>
+      <div class="hud-divider"></div>
+      <div class="hud-chip">
+        <span class="hud-label">Spent</span>
+        <span class="hud-value val-spent" id="hud-spent">₹0</span>
+      </div>
+      <div class="hud-divider"></div>
+      <div class="hud-chip">
+        <span class="hud-label">Saved</span>
+        <span class="hud-value val-saved" id="hud-saved">₹0</span>
+      </div>
+      <div class="hud-divider"></div>
+      <button class="hud-btn hud-btn-cart" id="btn-toggle-cart" onclick="GameApp.openCartModal()">
+        🛒 Cart (<span id="hud-cart-count">0</span>)
+      </button>
+      <button class="hud-btn" id="btn-toggle-mission" onclick="GameApp.openMissionModal()">
+        📋 Mission
+      </button>
+      <button class="hud-btn" style="background: linear-gradient(135deg, #10b981, #047857);" onclick="GameApp.openCheckoutModal()">
+        💳 Checkout
+      </button>
+    </div>
+
+    <!-- Desktop Controls Helper Box -->
+    <div id="desktop-controls-hint">
+      <strong>DESKTOP TESTING CONTROLS</strong><br>
+      • <strong>W, A, S, D</strong> : Walk through aisles<br>
+      • <strong>Mouse Drag / Look</strong> : Look around 360°<br>
+      • <strong>Left Click</strong> : Inspect product / Tap buttons<br>
+      • <strong>C Key</strong> : Open Shopping Trolley<br>
+      • <strong>M Key</strong> : Open Financial Mission
+    </div>
+
+    <!-- VR Instructions Helper Box -->
+    <div id="vr-instructions-hint">
+      <strong>META QUEST 3S WEBXR READY</strong><br>
+      • Click <strong>VR Goggles Icon</strong> at bottom right to enter VR<br>
+      • <strong>Left Joystick</strong> : Walk &amp; Teleport<br>
+      • <strong>Right Controller Ray</strong> : Aim at shelves &amp; pull <strong>Trigger</strong><br>
+      • <strong>Grip Button</strong> : Grab / release products into trolley<br>
+      • <strong>Y / B Button</strong> : Toggle Quick Wallet &amp; Cart HUD
+    </div>
+
+    <!-- Toast Notification Box -->
+    <div id="toast-msg">
+      <span id="toast-icon">💡</span>
+      <span id="toast-text">Notification message here</span>
+    </div>
+
+    <!-- MODAL 1: WELCOME SCREEN & STORYLINE -->
+    <div id="modal-welcome" class="modal-backdrop active interactive">
+      <div class="modal-card">
+        <div class="modal-badge badge-primary">✨ IMMERSIVE WEBXR SIMULATION</div>
+        <h1 class="modal-title">LIFECRAFT<br><span style="background: linear-gradient(90deg, #38bdf8, #818cf8); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">MONEYVERSE</span></h1>
+        <p class="modal-subtitle">"Your Money. Your Choices. Your Future."</p>
+
+        <div class="ai-guide-box">
+          <div class="ai-avatar">🤖</div>
+          <div class="ai-speech">
+            <strong>FINLEY (AI Financial Guide):</strong><br>
+            "Welcome to Moneyverse! You have received a virtual budget of <strong>₹10,000</strong>. Your mission is to shop smartly for your household, handle sudden unexpected real-life expenses, differentiate critical needs from tempting wants, and build savings for a future bicycle. Every financial decision matters!"
+          </div>
+        </div>
+
+        <div class="hero-stats">
+          <div class="hero-stat-card">
+            <div class="hero-stat-label">Starting Budget</div>
+            <div class="hero-stat-value">₹10,000</div>
+          </div>
+          <div class="hero-stat-card">
+            <div class="hero-stat-label">Future Goal</div>
+            <div class="hero-stat-value" style="color: #f59e0b;">₹2,000 Bicycle</div>
+          </div>
+          <div class="hero-stat-card">
+            <div class="hero-stat-label">Aisles to Explore</div>
+            <div class="hero-stat-value" style="color: #10b981;">8 Sections</div>
+          </div>
+        </div>
+
+        <div style="background: rgba(15, 23, 42, 0.6); border-radius: 12px; padding: 14px; margin-bottom: 24px; font-size: 13px; color: #94a3b8; line-height: 1.6;">
+          <strong style="color: #e2e8f0;">How to Play:</strong><br>
+          1. Walk to the grocery aisles and point at any product.<br>
+          2. Complete the <strong>Needs vs Wants</strong> and <strong>Smart Price Comparison</strong> quizzes.<br>
+          3. Beware of marketing impulse traps &amp; unexpected bills!<br>
+          4. When finished, proceed to the illuminated <strong>Checkout Counter</strong> for your personalized financial report.
+        </div>
+
+        <div class="btn-group" style="justify-content: flex-end;">
+          <button class="btn btn-primary" onclick="GameApp.startJourney()">
+            🚀 START JOURNEY (ENTER SUPERMARKET)
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL 2: PRODUCT INSPECTION & INTERACTION -->
+    <div id="modal-product" class="modal-backdrop interactive">
+      <div class="modal-card">
+        <button class="modal-close" onclick="GameApp.closeProductModal()">✕</button>
+        <div id="product-modal-badge" class="modal-badge badge-primary">FRUITS &amp; VEGETABLES</div>
+        <h2 id="product-modal-title" class="modal-title">Fresh Apples (1 kg)</h2>
+        <div style="font-size: 24px; font-weight: 800; color: #10b981; margin-bottom: 16px;">
+          ₹<span id="product-modal-price">140</span> <span id="product-modal-qty" style="font-size: 14px; color: #94a3b8; font-weight: 500;">/ 1 kg</span>
+        </div>
+
+        <p id="product-modal-desc" style="color: #cbd5e1; font-size: 14px; line-height: 1.6; margin-bottom: 20px;">
+          Nutritious fresh seasonal apples. Vital for healthy diet and daily energy.
+        </p>
+
+        <!-- Needs vs Wants Interactive Mini-Challenge -->
+        <div id="product-quiz-container" style="background: rgba(30, 41, 59, 0.7); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px; padding: 18px; margin-bottom: 20px;">
+          <div style="font-size: 12px; font-weight: 700; color: #38bdf8; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">
+            🧠 Financial Literacy Challenge:
+          </div>
+          <div style="font-size: 15px; font-weight: 600; color: #f8fafc; margin-bottom: 12px;">
+            Is this item a <strong>NEED</strong> or a <strong>WANT</strong>?
+          </div>
+          <div style="display: flex; gap: 10px;">
+            <button class="btn btn-secondary" style="flex: 1;" onclick="GameApp.answerProductQuiz('NEED')">
+              🥦 Essential NEED
+            </button>
+            <button class="btn btn-secondary" style="flex: 1;" onclick="GameApp.answerProductQuiz('WANT')">
+              💎 Optional WANT
+            </button>
+          </div>
+          <div id="product-quiz-feedback" style="display: none; margin-top: 12px; font-size: 13px; line-height: 1.5; padding: 10px; border-radius: 8px;">
+          </div>
+        </div>
+
+        <div class="btn-group">
+          <button id="btn-add-trolley" class="btn btn-success" style="flex: 1;" onclick="GameApp.addCurrentProductToCart()">
+            🛒 Add to Shopping Trolley
+          </button>
+          <button class="btn btn-secondary" onclick="GameApp.closeProductModal()">
+            Keep Looking
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL 3: SHOPPING TROLLEY CONTENTS -->
+    <div id="modal-cart" class="modal-backdrop interactive">
+      <div class="modal-card">
+        <button class="modal-close" onclick="GameApp.closeCartModal()">✕</button>
+        <div class="modal-badge badge-primary">🛒 VIRTUAL SHOPPING TROLLEY</div>
+        <h2 class="modal-title">Your Selected Products</h2>
+        <p class="modal-subtitle">Review items in your cart. You can remove items anytime to free up money.</p>
+
+        <div id="cart-items-container" class="cart-items-list">
+          <!-- Dynamically populated rows -->
+        </div>
+
+        <div style="background: rgba(15, 23, 42, 0.8); border-radius: 14px; padding: 16px; margin-bottom: 20px;">
+          <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px; color: #94a3b8;">
+            <span>Cart Items Count:</span>
+            <strong id="cart-modal-count" style="color: #fff;">0 items</strong>
+          </div>
+          <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px; color: #94a3b8;">
+            <span>Essential Needs:</span>
+            <strong id="cart-modal-needs" style="color: #34d399;">0</strong>
+          </div>
+          <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px; color: #94a3b8;">
+            <span>Optional Wants:</span>
+            <strong id="cart-modal-wants" style="color: #f472b6;">0</strong>
+          </div>
+          <div style="height: 1px; background: rgba(255, 255, 255, 0.1); margin: 10px 0;"></div>
+          <div style="display: flex; justify-content: space-between; font-size: 18px; font-weight: 800;">
+            <span style="color: #fff;">Cart Total:</span>
+            <span style="color: #10b981;">₹<span id="cart-modal-total">0</span></span>
+          </div>
+        </div>
+
+        <div class="btn-group">
+          <button class="btn btn-secondary" style="flex: 1;" onclick="GameApp.closeCartModal()">
+            Continue Shopping
+          </button>
+          <button class="btn btn-success" style="flex: 1;" onclick="GameApp.closeCartModal(); GameApp.openCheckoutModal();">
+            Proceed to Checkout
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL 4: SMART PRICE COMPARISON CHALLENGE -->
+    <div id="modal-comparison" class="modal-backdrop interactive">
+      <div class="modal-card">
+        <button class="modal-close" onclick="GameApp.closeComparisonModal()">✕</button>
+        <div class="modal-badge badge-warning">⚖️ SMART PRICE COMPARISON CHALLENGE</div>
+        <h2 class="modal-title">Grains Aisle: Basmati Rice</h2>
+        <p class="modal-subtitle">Three different brands are offering 1 kg of Basmati Rice. Which option provides the best value for money?</p>
+
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 24px;">
+          <!-- Option A -->
+          <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255,255,255,0.1); border-radius: 14px; padding: 16px; text-align: center;">
+            <div style="font-size: 13px; font-weight: 700; color: #94a3b8;">Brand A: Royal Elite</div>
+            <div style="font-size: 24px; font-weight: 800; color: #ef4444; margin: 8px 0;">₹120</div>
+            <div style="font-size: 11px; color: #64748b; margin-bottom: 12px;">Heavy celebrity branding &amp; glossy foil pack.</div>
+            <button class="btn btn-secondary" style="padding: 8px 12px; font-size: 12px; width: 100%;" onclick="GameApp.selectPriceComparisonOption('A')">Select Brand A</button>
+          </div>
+          <!-- Option B -->
+          <div style="background: rgba(16, 185, 129, 0.1); border: 2px solid #10b981; border-radius: 14px; padding: 16px; text-align: center; position: relative;">
+            <div style="position: absolute; top: -10px; left: 50%; transform: translateX(-50%); background: #10b981; color: #000; font-size: 9px; font-weight: 800; padding: 2px 8px; border-radius: 9999px;">TOP CONTENDER</div>
+            <div style="font-size: 13px; font-weight: 700; color: #34d399;">Brand B: Pure Farm</div>
+            <div style="font-size: 24px; font-weight: 800; color: #10b981; margin: 8px 0;">₹95</div>
+            <div style="font-size: 11px; color: #cbd5e1; margin-bottom: 12px;">Direct farm-sourced, identical grain quality &amp; aroma.</div>
+            <button class="btn btn-success" style="padding: 8px 12px; font-size: 12px; width: 100%;" onclick="GameApp.selectPriceComparisonOption('B')">Select Brand B</button>
+          </div>
+          <!-- Option C -->
+          <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255,255,255,0.1); border-radius: 14px; padding: 16px; text-align: center;">
+            <div style="font-size: 13px; font-weight: 700; color: #94a3b8;">Brand C: Quick Chef</div>
+            <div style="font-size: 24px; font-weight: 800; color: #fbbf24; margin: 8px 0;">₹110</div>
+            <div style="font-size: 11px; color: #64748b; margin-bottom: 12px;">Standard packaged rice with average grains.</div>
+            <button class="btn btn-secondary" style="padding: 8px 12px; font-size: 12px; width: 100%;" onclick="GameApp.selectPriceComparisonOption('C')">Select Brand C</button>
+          </div>
+        </div>
+
+        <div id="comparison-feedback" style="display: none; background: rgba(30, 41, 59, 0.8); border-radius: 14px; padding: 16px; font-size: 14px; line-height: 1.6; margin-bottom: 20px;">
+        </div>
+
+        <div class="btn-group" style="justify-content: flex-end;">
+          <button class="btn btn-secondary" onclick="GameApp.closeComparisonModal()">Close</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL 5: IMPULSE BUYING PROMOTION KIOSK -->
+    <div id="modal-impulse" class="modal-backdrop interactive">
+      <div class="modal-card">
+        <button class="modal-close" onclick="GameApp.closeImpulseModal()">✕</button>
+        <div class="modal-badge badge-danger">⚡ MARKETING PROMOTION ALERT</div>
+        <h2 class="modal-title">🔥 FLASH SALE: Buy 2 Get 1 Free!</h2>
+        <p class="modal-subtitle">Luxury Belgian Chocolate Mega Gift Box</p>
+
+        <div style="background: linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(15, 23, 42, 0.8)); border: 1px solid rgba(239, 68, 68, 0.4); border-radius: 18px; padding: 20px; margin-bottom: 20px; text-align: center;">
+          <div style="font-size: 40px; margin-bottom: 8px;">🍫🎁</div>
+          <div style="font-size: 18px; font-weight: 700; color: #fff;">Special Impulse Combo Pack</div>
+          <div style="font-size: 28px; font-weight: 900; color: #f43f5e; margin: 8px 0;">₹650</div>
+          <div style="font-size: 13px; color: #cbd5e1; max-width: 480px; margin: 0 auto; line-height: 1.5;">
+            "Hurry! Limited stock available. Treat yourself with premium imported sweets!"
+          </div>
+        </div>
+
+        <div class="ai-guide-box">
+          <div class="ai-avatar">💡</div>
+          <div class="ai-speech">
+            <strong>FINLEY'S FINANCIAL TIP:</strong><br>
+            "Over 70% of supermarket spending comes from unplanned impulse buys placed in flashy aisles! Ask yourself: Was this in your original shopping plan, or is the discount tricking you into spending ₹650 you hadn't budgeted for?"
+          </div>
+        </div>
+
+        <div class="btn-group">
+          <button class="btn btn-danger" style="flex: 1;" onclick="GameApp.chooseImpulseBuy(true)">
+            💸 Buy the Offer (₹650)
+          </button>
+          <button class="btn btn-success" style="flex: 1;" onclick="GameApp.chooseImpulseBuy(false)">
+            🛡️ Resist Impulse &amp; Save Money
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL 6: FUTURE SAVINGS GOAL (BICYCLE FUND) -->
+    <div id="modal-savings" class="modal-backdrop interactive">
+      <div class="modal-card">
+        <button class="modal-close" onclick="GameApp.closeSavingsModal()">✕</button>
+        <div class="modal-badge badge-warning">🎯 FUTURE GOAL ALLOCATION</div>
+        <h2 class="modal-title">Bicycle Savings Fund</h2>
+        <p class="modal-subtitle">You want to save ₹2,000 to buy a new bicycle. Allocate money into your savings vault before spending it all!</p>
+
+        <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 18px; padding: 24px; text-align: center; margin-bottom: 24px;">
+          <div style="font-size: 44px; margin-bottom: 6px;">🚲 💰</div>
+          <div style="font-size: 14px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px;">Current Bicycle Savings</div>
+          <div style="font-size: 36px; font-weight: 900; color: #f59e0b; margin: 8px 0;">₹<span id="savings-display-val">0</span> / ₹2,000</div>
+          
+          <div class="metric-track" style="height: 12px; margin: 16px auto; max-width: 380px;">
+            <div id="savings-progress-bar" class="metric-fill" style="width: 0%; background: linear-gradient(90deg, #f59e0b, #10b981);"></div>
+          </div>
+        </div>
+
+        <div style="font-size: 14px; font-weight: 600; color: #cbd5e1; margin-bottom: 12px;">Choose Amount to Deposit from Balance:</div>
+        <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+          <button class="btn btn-secondary" style="flex: 1;" onclick="GameApp.allocateSavings(500)">+ ₹500</button>
+          <button class="btn btn-secondary" style="flex: 1;" onclick="GameApp.allocateSavings(1000)">+ ₹1,000</button>
+          <button class="btn btn-success" style="flex: 1;" onclick="GameApp.allocateSavings(2000)">+ ₹2,000 (Full Goal)</button>
+        </div>
+
+        <div class="btn-group" style="justify-content: flex-end;">
+          <button class="btn btn-secondary" onclick="GameApp.closeSavingsModal()">Save &amp; Return</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL 7: UNEXPECTED REAL-LIFE EXPENSE POPUP -->
+    <div id="modal-emergency" class="modal-backdrop interactive">
+      <div class="modal-card" style="border-color: rgba(239, 68, 68, 0.5); box-shadow: 0 0 50px rgba(239, 68, 68, 0.3);">
+        <div class="modal-badge badge-danger">🚨 UNEXPECTED REAL-LIFE EXPENSE</div>
+        <h2 id="emergency-title" class="modal-title">Electricity Bill Arrived!</h2>
+        
+        <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 16px; padding: 20px; margin-bottom: 20px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <span style="font-size: 16px; font-weight: 700; color: #fca5a5;" id="emergency-event-name">Unplanned Household Bill</span>
+            <span style="font-size: 26px; font-weight: 900; color: #ef4444;" id="emergency-amount">₹850</span>
+          </div>
+          <p id="emergency-desc" style="font-size: 14px; color: #cbd5e1; line-height: 1.6;">
+            Your family electricity bill is due immediately. If unpaid, the power will be cut.
+          </p>
+        </div>
+
+        <div class="ai-guide-box">
+          <div class="ai-avatar">⚠️</div>
+          <div class="ai-speech">
+            <strong>FINANCIAL REALITY LESSON:</strong><br>
+            "Life doesn't always go according to plan! Emergencies, medical bills, and repairs happen to every family. Smart money managers maintain an emergency cushion so they don't fall into debt."
+          </div>
+        </div>
+
+        <div class="btn-group">
+          <button class="btn btn-danger" style="width: 100%;" onclick="GameApp.payUnexpectedExpense()">
+            💳 Pay Expense &amp; Adjust Budget
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL 8: CHECKOUT COUNTER & BILLING -->
+    <div id="modal-checkout" class="modal-backdrop interactive">
+      <div class="modal-card">
+        <button class="modal-close" onclick="GameApp.closeCheckoutModal()">✕</button>
+        <div class="modal-badge badge-success">🧾 SUPERMARKET CHECKOUT LANE 1</div>
+        <h2 class="modal-title">Final Billing Summary</h2>
+        <p class="modal-subtitle">Review your itemized receipt before finalizing your payment.</p>
+
+        <div id="checkout-receipt-list" class="cart-items-list" style="max-height: 220px;">
+          <!-- Dynamically populated -->
+        </div>
+
+        <div style="background: rgba(15, 23, 42, 0.8); border-radius: 14px; padding: 18px; margin-bottom: 20px; font-size: 14px;">
+          <div style="display: flex; justify-content: space-between; margin-bottom: 8px; color: #94a3b8;">
+            <span>Initial Virtual Budget:</span>
+            <strong style="color: #38bdf8;">₹10,000</strong>
+          </div>
+          <div style="display: flex; justify-content: space-between; margin-bottom: 8px; color: #94a3b8;">
+            <span>Supermarket Purchases Subtotal:</span>
+            <strong id="checkout-subtotal" style="color: #f43f5e;">₹0</strong>
+          </div>
+          <div style="display: flex; justify-content: space-between; margin-bottom: 8px; color: #94a3b8;">
+            <span>Unexpected Real-Life Expenses:</span>
+            <strong id="checkout-unexpected" style="color: #ef4444;">₹0</strong>
+          </div>
+          <div style="display: flex; justify-content: space-between; margin-bottom: 8px; color: #94a3b8;">
+            <span>Bicycle Savings Reserved:</span>
+            <strong id="checkout-savings" style="color: #f59e0b;">₹0</strong>
+          </div>
+          <div style="height: 1px; background: rgba(255, 255, 255, 0.1); margin: 12px 0;"></div>
+          <div style="display: flex; justify-content: space-between; font-size: 18px; font-weight: 800;">
+            <span style="color: #ffffff;">Remaining Free Balance:</span>
+            <strong id="checkout-remaining-balance" style="color: #10b981;">₹10,000</strong>
+          </div>
+        </div>
+
+        <div id="checkout-confirm-box" style="background: rgba(30, 41, 59, 0.7); border-radius: 12px; padding: 14px; margin-bottom: 20px; font-size: 13px; color: #cbd5e1; text-align: center;">
+          🔔 <strong>Ready to pay?</strong> Once confirmed, your virtual wallet will execute the transaction and generate your <strong>Personal Financial Report</strong>.
+        </div>
+
+        <div class="btn-group">
+          <button class="btn btn-secondary" onclick="GameApp.closeCheckoutModal()">
+            Return to Shopping
+          </button>
+          <button class="btn btn-success" style="flex: 1;" onclick="GameApp.confirmPaymentAndGenerateReport()">
+            💳 CONFIRM &amp; PAY NOW
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL 9: PERSONAL FINANCIAL REPORT DASHBOARD -->
+    <div id="modal-report" class="modal-backdrop interactive">
+      <div class="modal-card" style="max-width: 760px;">
+        <div class="modal-badge badge-primary">📊 COMPREHENSIVE PERFORMANCE EVALUATION</div>
+        <h2 class="modal-title">Personal Financial Report</h2>
+        <p class="modal-subtitle">Simulation complete. Here is how effectively you managed money, prioritized needs, and handled life's surprises.</p>
+
+        <!-- Main Score Hero Card -->
+        <div class="report-score-box">
+          <div style="font-size: 13px; text-transform: uppercase; letter-spacing: 1px; color: #93c5fd; font-weight: 700;">Overall Financial Literacy Score</div>
+          <div class="score-circle-wrapper">
+            <div id="report-final-score" class="report-score-val">88</div>
+            <div style="font-size: 14px; color: #94a3b8; font-weight: 600;">OUT OF 100</div>
+          </div>
+          <div id="report-tier-badge" class="report-tier-badge" style="background: #10b981; color: #000;">
+            🌟 SMART SPENDER
+          </div>
+        </div>
+
+        <!-- 6 Performance Metrics Bars -->
+        <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 18px; padding: 20px; margin: 20px 0;">
+          <h3 style="font-size: 15px; color: #f8fafc; margin-bottom: 16px;">Core Competency Breakdown</h3>
+
+          <div class="metric-bar-group">
+            <div class="metric-info">
+              <span>1. Budget Management &amp; Solvency</span>
+              <span id="metric-budget-txt">90%</span>
+            </div>
+            <div class="metric-track">
+              <div id="metric-budget-bar" class="metric-fill" style="width: 90%; background: #38bdf8;"></div>
+            </div>
+          </div>
+
+          <div class="metric-bar-group">
+            <div class="metric-info">
+              <span>2. Needs vs Wants Identification</span>
+              <span id="metric-needs-txt">85%</span>
+            </div>
+            <div class="metric-track">
+              <div id="metric-needs-bar" class="metric-fill" style="width: 85%; background: #10b981;"></div>
+            </div>
+          </div>
+
+          <div class="metric-bar-group">
+            <div class="metric-info">
+              <span>3. Smart Price Comparison</span>
+              <span id="metric-price-txt">100%</span>
+            </div>
+            <div class="metric-track">
+              <div id="metric-price-bar" class="metric-fill" style="width: 100%; background: #f59e0b;"></div>
+            </div>
+          </div>
+
+          <div class="metric-bar-group">
+            <div class="metric-info">
+              <span>4. Impulse Buying Resistance</span>
+              <span id="metric-impulse-txt">80%</span>
+            </div>
+            <div class="metric-track">
+              <div id="metric-impulse-bar" class="metric-fill" style="width: 80%; background: #a855f7;"></div>
+            </div>
+          </div>
+
+          <div class="metric-bar-group">
+            <div class="metric-info">
+              <span>5. Emergency Expense Management</span>
+              <span id="metric-emergency-txt">85%</span>
+            </div>
+            <div class="metric-track">
+              <div id="metric-emergency-bar" class="metric-fill" style="width: 85%; background: #f43f5e;"></div>
+            </div>
+          </div>
+
+          <div class="metric-bar-group">
+            <div class="metric-info">
+              <span>6. Future Savings &amp; Planning</span>
+              <span id="metric-savings-txt">100%</span>
+            </div>
+            <div class="metric-track">
+              <div id="metric-savings-bar" class="metric-fill" style="width: 100%; background: #34d399;"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Financial Summary Numbers -->
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px;">
+          <div class="hero-stat-card">
+            <div class="hero-stat-label">Total Spent</div>
+            <div id="rep-stat-spent" class="hero-stat-value" style="font-size: 17px; color: #f43f5e;">₹0</div>
+          </div>
+          <div class="hero-stat-card">
+            <div class="hero-stat-label">Saved for Future</div>
+            <div id="rep-stat-saved" class="hero-stat-value" style="font-size: 17px; color: #f59e0b;">₹0</div>
+          </div>
+          <div class="hero-stat-card">
+            <div class="hero-stat-label">Remaining Balance</div>
+            <div id="rep-stat-balance" class="hero-stat-value" style="font-size: 17px; color: #10b981;">₹0</div>
+          </div>
+        </div>
+
+        <!-- Personalized Feedback & Actionable Tips -->
+        <div class="tips-card">
+          <h4>💡 Personalized Financial Feedback</h4>
+          <p id="report-feedback-text" style="font-size: 13px; color: #cbd5e1; line-height: 1.6; margin-bottom: 12px;">
+            Great job! You managed to fulfill your household shopping while allocating substantial money toward your bicycle goal and paying unexpected bills without debt.
+          </p>
+          <h4 style="margin-top: 14px;">🌟 Key Financial Principles for Real Life:</h4>
+          <ul id="report-tips-list">
+            <li><strong>Pay Yourself First:</strong> Always put 10%–20% of your money into savings before you begin spending.</li>
+            <li><strong>The 48-Hour Rule:</strong> When tempted by flash sales or deals, wait 48 hours to prevent impulse buys.</li>
+            <li><strong>Build a Rainy-Day Cushion:</strong> Unexpected expenses are guaranteed in life; preparing ahead prevents panic.</li>
+          </ul>
+        </div>
+
+        <div class="btn-group" style="justify-content: center;">
+          <button class="btn btn-primary" onclick="GameApp.restartJourney()">
+            🔄 RESTART JOURNEY (NEW ₹10,000 BUDGET)
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL 10: MISSION CHECKLIST MODAL -->
+    <div id="modal-mission" class="modal-backdrop interactive">
+      <div class="modal-card">
+        <button class="modal-close" onclick="GameApp.closeMissionModal()">✕</button>
+        <div class="modal-badge badge-primary">📋 HOUSEHOLD SHOPPING MISSION</div>
+        <h2 class="modal-title">Essential Shopping Checklist</h2>
+        <p class="modal-subtitle">Make sure you secure essential nutrition, staples and health supplies for your home!</p>
+
+        <div style="background: rgba(15, 23, 42, 0.7); border-radius: 14px; padding: 18px; margin-bottom: 20px; font-size: 14px; line-height: 1.8;">
+          <div id="chk-item-grain">⬜ <strong>Staple Grain:</strong> Rice (Brand B recommended) or Whole Wheat Atta</div>
+          <div id="chk-item-dairy">⬜ <strong>Dairy:</strong> Fresh Milk or Curd</div>
+          <div id="chk-item-produce">⬜ <strong>Produce:</strong> Fresh Apples, Bananas or Potatoes</div>
+          <div id="chk-item-hygiene">⬜ <strong>Hygiene:</strong> Bath Soap or Toothpaste</div>
+          <div id="chk-item-health">⬜ <strong>Health Essential:</strong> First Aid Kit or Antiseptic Liquid</div>
+          <div id="chk-item-savings">⬜ <strong>Future Goal:</strong> Deposit ₹2,000 for your Bicycle Fund</div>
+        </div>
+
+        <div class="btn-group" style="justify-content: flex-end;">
+          <button class="btn btn-secondary" onclick="GameApp.closeMissionModal()">Back to Supermarket</button>
+        </div>
+      </div>
+    </div>
+
+  </div> <!-- End #ui-container -->
+
+
+  <!-- ========================================== -->
+  <!-- A-FRAME 3D VIRTUAL REALITY SCENE           -->
+  <!-- ========================================== -->
+  <a-scene
+    renderer="antialias: true; colorManagement: true; highRefreshRate: true; foveationLevel: 2;"
+    vr-mode-ui="enabled: true"
+    webxr="requiredFeatures: local-floor;"
+    background="color: #0b0f19"
+    fog="type: linear; color: #0b0f19; near: 25; far: 50"
+    id="supermarket-scene">
+
+    <!-- Procedural Assets & Mixins -->
+    <a-assets timeout="10000">
+      <!-- Mixins for clickable products -->
+      <a-mixin id="product-base"
+        class="clickable interactive-product"
+        geometry="primitive: box; width: 0.35; height: 0.45; depth: 0.25"
+        material="roughness: 0.3; metalness: 0.1">
+      </a-mixin>
+
+      <a-mixin id="shelf-tier"
+        geometry="primitive: box; width: 5.5; height: 0.05; depth: 0.9"
+        material="color: #334155; roughness: 0.4; metalness: 0.6">
+      </a-mixin>
+    </a-assets>
+
+    <!-- ========================================== -->
+    <!-- PLAYER RIG WITH QUEST 3S DUAL CONTROLLERS  -->
+    <!-- ========================================== -->
+    <a-entity id="rig" position="0 0 16">
+      <!-- Camera -->
+      <a-camera id="head" position="0 1.6 0" look-controls="pointerLockEnabled: false" wasd-controls="acceleration: 30">
+        <!-- Center Desktop Reticle Pointer -->
+        <a-entity id="cursor-desktop"
+          cursor="rayOrigin: mouse; fuse: false"
+          raycaster="objects: .clickable; far: 20">
+        </a-entity>
+
+        <!-- Floating VR HUD Panel attached to user view (Toggled or subtly docked) -->
+        <a-entity id="vr-floating-hud" position="0 0.7 -1.4" scale="0.8 0.8 0.8">
+          <a-plane width="1.6" height="0.28" color="#0f172a" material="opacity: 0.85; transparent: true; roughness: 0.8"
+            class="clickable" position="0 0 0">
+            <a-text id="vr-hud-text" value="BUDGET: Rs.10,000 | BAL: Rs.10,000 | CART: 0 | SAVED: Rs.0"
+              align="center" position="0 0 0.01" width="3.2" color="#38bdf8" font="roboto">
+            </a-text>
+          </a-plane>
+        </a-entity>
+      </a-camera>
+
+      <!-- Meta Quest 3S Left Touch Controller (Locomotion & Teleportation) -->
+      <a-entity id="left-controller"
+        oculus-touch-controls="hand: left"
+        laser-controls="hand: left"
+        raycaster="objects: .clickable, .teleport-target; far: 15; lineColor: #38bdf8; lineOpacity: 0.7">
+      </a-entity>
+
+      <!-- Meta Quest 3S Right Touch Controller (Ray Selection, Grabbing & Triggers) -->
+      <a-entity id="right-controller"
+        oculus-touch-controls="hand: right"
+        laser-controls="hand: right"
+        raycaster="objects: .clickable; far: 15; lineColor: #10b981; lineOpacity: 0.9">
+      </a-entity>
+
+      <!-- Shopping Trolley (Follows or positioned near the player rig) -->
+      <a-entity id="vr-player-trolley" position="0.9 0 -0.8" rotation="0 -15 0">
+        <!-- Trolley Basket Frame (Metallic Mesh) -->
+        <a-box position="0 0.7 0" width="0.75" height="0.45" depth="1.0"
+          material="color: #64748b; wireframe: true; roughness: 0.3; metalness: 0.8" class="clickable"
+          onclick="GameApp.openCartModal()">
+        </a-box>
+        <!-- Trolley Bottom Tray -->
+        <a-box position="0 0.25 0" width="0.75" height="0.05" depth="1.0"
+          material="color: #1e293b; roughness: 0.5; metalness: 0.7">
+        </a-box>
+        <!-- Push Handle -->
+        <a-cylinder position="0 0.95 0.52" rotation="0 0 90" radius="0.025" height="0.75"
+          material="color: #dc2626; roughness: 0.4">
+        </a-cylinder>
+        <!-- 4 Wheels -->
+        <a-cylinder position="0.32 0.08 0.42" rotation="90 0 0" radius="0.08" height="0.05" material="color: #0f172a"></a-cylinder>
+        <a-cylinder position="-0.32 0.08 0.42" rotation="90 0 0" radius="0.08" height="0.05" material="color: #0f172a"></a-cylinder>
+        <a-cylinder position="0.32 0.08 -0.42" rotation="90 0 0" radius="0.08" height="0.05" material="color: #0f172a"></a-cylinder>
+        <a-cylinder position="-0.32 0.08 -0.42" rotation="90 0 0" radius="0.08" height="0.05" material="color: #0f172a"></a-cylinder>
+        <!-- Overhead Holographic Cart Label -->
+        <a-plane position="0 1.25 0" width="1.1" height="0.25" color="#0f172a" material="opacity: 0.85; transparent: true" class="clickable" onclick="GameApp.openCartModal()">
+          <a-text id="trolley-3d-label" value="TROLLEY: 0 Items | Rs.0" align="center" position="0 0 0.01" width="2.4" color="#a855f7"></a-text>
+        </a-plane>
+        <!-- Container for dynamically spawned mini-models in the trolley -->
+        <a-entity id="trolley-items-spawn"></a-entity>
+      </a-entity>
+    </a-entity>
+
+
+    <!-- ========================================== -->
+    <!-- LIGHTING & ATMOSPHERE                      -->
+    <!-- ========================================== -->
+    <a-entity light="type: ambient; color: #e2e8f0; intensity: 0.9;"></a-entity>
+    <a-entity light="type: directional; color: #ffffff; intensity: 0.8; castShadow: false;" position="0 15 5"></a-entity>
+    <a-entity light="type: directional; color: #93c5fd; intensity: 0.4; castShadow: false;" position="0 10 -15"></a-entity>
+
+
+    <!-- ========================================== -->
+    <!-- SUPERMARKET ARCHITECTURE & FLOORS          -->
+    <!-- ========================================== -->
+    <!-- Floor: Main Supermarket Polished Tile Floor -->
+    <a-plane id="supermarket-floor"
+      class="teleport-target"
+      position="0 0 0"
+      rotation="-90 0 0"
+      width="34"
+      height="44"
+      color="#1e293b"
+      material="roughness: 0.2; metalness: 0.2">
+    </a-plane>
+
+    <!-- Walkway decorative floor stripes -->
+    <a-plane position="0 0.01 0" rotation="-90 0 0" width="4" height="42" color="#0f172a" material="roughness: 0.4"></a-plane>
+    <a-plane position="-8 0.01 0" rotation="-90 0 0" width="3.5" height="42" color="#0f172a" material="roughness: 0.4"></a-plane>
+    <a-plane position="8 0.01 0" rotation="-90 0 0" width="3.5" height="42" color="#0f172a" material="roughness: 0.4"></a-plane>
+
+    <!-- Ceiling with Recessed LED Lights -->
+    <a-plane position="0 5.5 0" rotation="90 0 0" width="34" height="44" color="#090d16" material="roughness: 0.8"></a-plane>
+
+    <!-- Fluorescent Light Strip Props across Ceiling -->
+    <a-box position="-8 5.4 -5" width="0.4" height="0.1" depth="12" color="#ffffff" material="emissive: #ffffff; emissiveIntensity: 0.8;"></a-box>
+    <a-box position="0 5.4 -5" width="0.4" height="0.1" depth="12" color="#ffffff" material="emissive: #ffffff; emissiveIntensity: 0.8;"></a-box>
+    <a-box position="8 5.4 -5" width="0.4" height="0.1" depth="12" color="#ffffff" material="emissive: #ffffff; emissiveIntensity: 0.8;"></a-box>
+    <a-box position="-8 5.4 10" width="0.4" height="0.1" depth="10" color="#ffffff" material="emissive: #ffffff; emissiveIntensity: 0.8;"></a-box>
+    <a-box position="0 5.4 10" width="0.4" height="0.1" depth="10" color="#ffffff" material="emissive: #ffffff; emissiveIntensity: 0.8;"></a-box>
+    <a-box position="8 5.4 10" width="0.4" height="0.1" depth="10" color="#ffffff" material="emissive: #ffffff; emissiveIntensity: 0.8;"></a-box>
+
+    <!-- Supermarket Walls -->
+    <!-- Back Wall (Far end) -->
+    <a-box position="0 2.75 -22" width="34" height="5.5" depth="0.5" color="#1e293b" material="roughness: 0.7"></a-box>
+    <!-- Front Entrance Wall -->
+    <a-box position="-10 2.75 22" width="14" height="5.5" depth="0.5" color="#1e293b"></a-box>
+    <a-box position="10 2.75 22" width="14" height="5.5" depth="0.5" color="#1e293b"></a-box>
+    <!-- Glass Entrance Doors -->
+    <a-box position="0 2.2 22" width="6" height="4.4" depth="0.1" color="#38bdf8" material="opacity: 0.25; transparent: true; roughness: 0.1"></a-box>
+    <!-- Left Wall -->
+    <a-box position="-17 2.75 0" width="0.5" height="5.5" depth="44" color="#111827"></a-box>
+    <!-- Right Wall -->
+    <a-box position="17 2.75 0" width="0.5" height="5.5" depth="44" color="#111827"></a-box>
+
+    <!-- Supermarket Branding Banner above Entrance -->
+    <a-plane position="0 4.8 21.6" rotation="0 180 0" width="12" height="1.2" color="#0f172a" material="roughness: 0.4">
+      <a-text value="LIFECRAFT - MONEYVERSE SUPERMARKET" align="center" position="0 0.1 0.02" width="12" color="#38bdf8" font="roboto"></a-text>
+      <a-text value="SMART FINANCIAL DECISIONS START HERE" align="center" position="0 -0.3 0.02" width="8" color="#94a3b8" font="roboto"></a-text>
+    </a-plane>
+
+
+    <!-- ========================================== -->
+    <!-- 8 SUPERMARKET SHOPPING AISLES & SHELVES    -->
+    <!-- ========================================== -->
+
+    <!-- AISLE 1 (LEFT-FRONT): FRUITS & VEGETABLES -->
+    <a-entity id="aisle-fruits" position="-12 0 10">
+      <!-- Overhead Aisle Sign -->
+      <a-plane position="0 3.8 0" rotation="0 90 0" width="4.5" height="0.8" color="#065f46" material="roughness: 0.3">
+        <a-text value="SECTION 1: FRUITS & VEGETABLES" align="center" position="0 0 0.02" width="6" color="#6ee7b7"></a-text>
+      </a-plane>
+      <!-- Gondola Shelving Unit -->
+      <a-box position="0 1.2 0" width="1.2" height="2.4" depth="5.5" color="#1e293b" material="roughness: 0.5"></a-box>
+      <!-- Shelf Tiers -->
+      <a-box position="0 0.6 0" width="1.5" height="0.06" depth="5.4" color="#334155"></a-box>
+      <a-box position="0 1.2 0" width="1.5" height="0.06" depth="5.4" color="#334155"></a-box>
+      <a-box position="0 1.8 0" width="1.5" height="0.06" depth="5.4" color="#334155"></a-box>
+
+      <!-- Products on Shelves: Fresh Apples, Bananas, Potatoes, Exotic Avocados -->
+      <!-- Product 1: Fresh Apples (Need) -->
+      <a-entity position="0.8 1.4 -1.8" class="clickable interactive-product" onclick="GameApp.inspectProduct('apples')">
+        <a-sphere radius="0.16" color="#ef4444" position="0 0 0" material="roughness: 0.2; metalness: 0.1"></a-sphere>
+        <a-sphere radius="0.14" color="#dc2626" position="0.18 0 0.05"></a-sphere>
+        <a-sphere radius="0.15" color="#b91c1c" position="-0.16 0 0.02"></a-sphere>
+        <!-- Price Tag -->
+        <a-plane position="0 -0.2 0.3" rotation="-20 0 0" width="0.75" height="0.22" color="#0f172a">
+          <a-text value="Fresh Apples\nRs.140 / kg [NEED]" align="center" position="0 0 0.01" width="1.7" color="#34d399"></a-text>
+        </a-plane>
+      </a-entity>
+
+      <!-- Product 2: Farm Bananas (Need) -->
+      <a-entity position="0.8 1.4 -0.5" class="clickable interactive-product" onclick="GameApp.inspectProduct('bananas')">
+        <a-cylinder radius="0.06" height="0.38" rotation="0 0 35" color="#eab308" position="0 0 0"></a-cylinder>
+        <a-cylinder radius="0.06" height="0.38" rotation="0 0 45" color="#facc15" position="0.12 0 0.05"></a-cylinder>
+        <!-- Price Tag -->
+        <a-plane position="0 -0.2 0.3" rotation="-20 0 0" width="0.75" height="0.22" color="#0f172a">
+          <a-text value="Bananas (Dozen)\nRs.60 [NEED]" align="center" position="0 0 0.01" width="1.7" color="#34d399"></a-text>
+        </a-plane>
+      </a-entity>
+
+      <!-- Product 3: Fresh Potatoes (Need) -->
+      <a-entity position="0.8 1.4 0.8" class="clickable interactive-product" onclick="GameApp.inspectProduct('potatoes')">
+        <a-box width="0.38" height="0.45" depth="0.28" color="#a16207" material="roughness: 0.9" position="0 0 0"></a-box>
+        <!-- Price Tag -->
+        <a-plane position="0 -0.2 0.3" rotation="-20 0 0" width="0.75" height="0.22" color="#0f172a">
+          <a-text value="Potatoes (2 kg)\nRs.70 [NEED]" align="center" position="0 0 0.01" width="1.7" color="#34d399"></a-text>
+        </a-plane>
+      </a-entity>
+
+      <!-- Product 4: Exotic Imported Avocados (Want - Expensive) -->
+      <a-entity position="0.8 1.4 2.0" class="clickable interactive-product" onclick="GameApp.inspectProduct('avocados')">
+        <a-sphere radius="0.15" color="#166534" position="0 0 0"></a-sphere>
+        <a-sphere radius="0.15" color="#14532d" position="0.22 0 0"></a-sphere>
+        <!-- Price Tag -->
+        <a-plane position="0 -0.2 0.3" rotation="-20 0 0" width="0.75" height="0.22" color="#0f172a">
+          <a-text value="Exotic Avocados\nRs.380 / 2pcs [WANT]" align="center" position="0 0 0.01" width="1.7" color="#f472b6"></a-text>
+        </a-plane>
+      </a-entity>
+    </a-entity>
+
+
+    <!-- AISLE 2 (LEFT-BACK): DAIRY PRODUCTS -->
+    <a-entity id="aisle-dairy" position="-12 0 -6">
+      <!-- Overhead Aisle Sign -->
+      <a-plane position="0 3.8 0" rotation="0 90 0" width="4.5" height="0.8" color="#0284c7" material="roughness: 0.3">
+        <a-text value="SECTION 2: DAIRY & CHILLED" align="center" position="0 0 0.02" width="6" color="#bae6fd"></a-text>
+      </a-plane>
+      <!-- Gondola Shelving Unit -->
+      <a-box position="0 1.2 0" width="1.2" height="2.4" depth="5.5" color="#1e293b"></a-box>
+      <a-box position="0 0.6 0" width="1.5" height="0.06" depth="5.4" color="#334155"></a-box>
+      <a-box position="0 1.2 0" width="1.5" height="0.06" depth="5.4" color="#334155"></a-box>
+      <a-box position="0 1.8 0" width="1.5" height="0.06" depth="5.4" color="#334155"></a-box>
+
+      <!-- Product 5: Toned Fresh Milk (Need) -->
+      <a-entity position="0.8 1.4 -1.8" class="clickable interactive-product" onclick="GameApp.inspectProduct('milk')">
+        <a-box width="0.28" height="0.45" depth="0.22" color="#f8fafc" material="roughness: 0.3"></a-box>
+        <a-plane position="0 0 0.12" width="0.25" height="0.38" color="#0284c7">
+          <a-text value="MILK\n1L" align="center" position="0 0 0.01" width="1.4" color="#ffffff"></a-text>
+        </a-plane>
+        <a-plane position="0 -0.2 0.3" rotation="-20 0 0" width="0.75" height="0.22" color="#0f172a">
+          <a-text value="Fresh Milk (1L)\nRs.56 [NEED]" align="center" position="0 0 0.01" width="1.7" color="#34d399"></a-text>
+        </a-plane>
+      </a-entity>
+
+      <!-- Product 6: Fresh Curd / Dahi (Need) -->
+      <a-entity position="0.8 1.4 -0.5" class="clickable interactive-product" onclick="GameApp.inspectProduct('curd')">
+        <a-cylinder radius="0.18" height="0.26" color="#f1f5f9"></a-cylinder>
+        <a-plane position="0 -0.2 0.3" rotation="-20 0 0" width="0.75" height="0.22" color="#0f172a">
+          <a-text value="Fresh Curd (500g)\nRs.40 [NEED]" align="center" position="0 0 0.01" width="1.7" color="#34d399"></a-text>
+        </a-plane>
+      </a-entity>
+
+      <!-- Product 7: Table Butter (Need) -->
+      <a-entity position="0.8 1.4 0.8" class="clickable interactive-product" onclick="GameApp.inspectProduct('butter')">
+        <a-box width="0.35" height="0.22" depth="0.22" color="#fde047"></a-box>
+        <a-plane position="0 -0.2 0.3" rotation="-20 0 0" width="0.75" height="0.22" color="#0f172a">
+          <a-text value="Butter (200g)\nRs.110 [NEED]" align="center" position="0 0 0.01" width="1.7" color="#34d399"></a-text>
+        </a-plane>
+      </a-entity>
+
+      <!-- Product 8: Artisanal Imported Truffle Cheese (Want) -->
+      <a-entity position="0.8 1.4 2.0" class="clickable interactive-product" onclick="GameApp.inspectProduct('cheese')">
+        <a-cylinder radius="0.16" height="0.2" color="#ca8a04"></a-cylinder>
+        <a-plane position="0 -0.2 0.3" rotation="-20 0 0" width="0.75" height="0.22" color="#0f172a">
+          <a-text value="Artisanal Cheese\nRs.620 [WANT]" align="center" position="0 0 0.01" width="1.7" color="#f472b6"></a-text>
+        </a-plane>
+      </a-entity>
+    </a-entity>
+
+
+    <!-- AISLE 3 (CENTER-LEFT FRONT): GRAINS & CEREALS -->
+    <a-entity id="aisle-grains" position="-4 0 10">
+      <!-- Overhead Aisle Sign -->
+      <a-plane position="0 3.8 0" rotation="0 90 0" width="4.5" height="0.8" color="#b45309" material="roughness: 0.3">
+        <a-text value="SECTION 3: GRAINS & CEREALS" align="center" position="0 0 0.02" width="6" color="#fde68a"></a-text>
+      </a-plane>
+      <a-box position="0 1.2 0" width="1.2" height="2.4" depth="5.5" color="#1e293b"></a-box>
+      <a-box position="0 0.6 0" width="1.5" height="0.06" depth="5.4" color="#334155"></a-box>
+      <a-box position="0 1.2 0" width="1.5" height="0.06" depth="5.4" color="#334155"></a-box>
+      <a-box position="0 1.8 0" width="1.5" height="0.06" depth="5.4" color="#334155"></a-box>
+
+      <!-- Product 9: Basmati Rice (Triggers Smart Price Comparison Challenge) -->
+      <a-entity position="0.8 1.4 -1.8" class="clickable interactive-product" onclick="GameApp.openComparisonModal()">
+        <a-box width="0.32" height="0.48" depth="0.24" color="#fef08a"></a-box>
+        <!-- Floating Challenge Icon -->
+        <a-plane position="0 0.45 0" rotation="0 0 0" width="0.5" height="0.2" color="#f59e0b">
+          <a-text value="⚖️ COMPARE" align="center" position="0 0 0.01" width="1.8" color="#000"></a-text>
+        </a-plane>
+        <a-plane position="0 -0.2 0.3" rotation="-20 0 0" width="0.75" height="0.22" color="#0f172a">
+          <a-text value="Basmati Rice (1kg)\nBrand Comparison" align="center" position="0 0 0.01" width="1.7" color="#f59e0b"></a-text>
+        </a-plane>
+      </a-entity>
+
+      <!-- Product 10: Whole Wheat Atta 5kg (Need) -->
+      <a-entity position="0.8 1.4 -0.5" class="clickable interactive-product" onclick="GameApp.inspectProduct('atta')">
+        <a-box width="0.38" height="0.55" depth="0.28" color="#d97706"></a-box>
+        <a-plane position="0 -0.2 0.3" rotation="-20 0 0" width="0.75" height="0.22" color="#0f172a">
+          <a-text value="Wheat Atta (5kg)\nRs.230 [NEED]" align="center" position="0 0 0.01" width="1.7" color="#34d399"></a-text>
+        </a-plane>
+      </a-entity>
+
+      <!-- Product 11: Rolled Oats 1kg (Need) -->
+      <a-entity position="0.8 1.4 0.8" class="clickable interactive-product" onclick="GameApp.inspectProduct('oats')">
+        <a-cylinder radius="0.16" height="0.42" color="#fed7aa"></a-cylinder>
+        <a-plane position="0 -0.2 0.3" rotation="-20 0 0" width="0.75" height="0.22" color="#0f172a">
+          <a-text value="Rolled Oats (1kg)\nRs.160 [NEED]" align="center" position="0 0 0.01" width="1.7" color="#34d399"></a-text>
+        </a-plane>
+      </a-entity>
+
+      <!-- Product 12: Sugary Choco Loops Kids Cereal (Want) -->
+      <a-entity position="0.8 1.4 2.0" class="clickable interactive-product" onclick="GameApp.inspectProduct('cereal')">
+        <a-box width="0.3" height="0.46" depth="0.18" color="#c026d3"></a-box>
+        <a-plane position="0 -0.2 0.3" rotation="-20 0 0" width="0.75" height="0.22" color="#0f172a">
+          <a-text value="Choco Loops (350g)\nRs.320 [WANT]" align="center" position="0 0 0.01" width="1.7" color="#f472b6"></a-text>
+        </a-plane>
+      </a-entity>
+    </a-entity>
+
+
+    <!-- AISLE 4 (CENTER-LEFT BACK): SNACKS & BEVERAGES -->
+    <a-entity id="aisle-snacks" position="-4 0 -6">
+      <a-plane position="0 3.8 0" rotation="0 90 0" width="4.5" height="0.8" color="#7c3aed" material="roughness: 0.3">
+        <a-text value="SECTION 4: SNACKS & BEVERAGES" align="center" position="0 0 0.02" width="6" color="#ddd6fe"></a-text>
+      </a-plane>
+      <a-box position="0 1.2 0" width="1.2" height="2.4" depth="5.5" color="#1e293b"></a-box>
+      <a-box position="0 0.6 0" width="1.5" height="0.06" depth="5.4" color="#334155"></a-box>
+      <a-box position="0 1.2 0" width="1.5" height="0.06" depth="5.4" color="#334155"></a-box>
+      <a-box position="0 1.8 0" width="1.5" height="0.06" depth="5.4" color="#334155"></a-box>
+
+      <!-- Product 13: Marie Biscuits Pack (Need / Low cost staple) -->
+      <a-entity position="0.8 1.4 -1.8" class="clickable interactive-product" onclick="GameApp.inspectProduct('biscuits')">
+        <a-cylinder radius="0.12" height="0.45" rotation="0 0 90" color="#f59e0b"></a-cylinder>
+        <a-plane position="0 -0.2 0.3" rotation="-20 0 0" width="0.75" height="0.22" color="#0f172a">
+          <a-text value="Marie Biscuits\nRs.45 [NEED]" align="center" position="0 0 0.01" width="1.7" color="#34d399"></a-text>
+        </a-plane>
+      </a-entity>
+
+      <!-- Product 14: Potato Chips (Want) -->
+      <a-entity position="0.8 1.4 -0.5" class="clickable interactive-product" onclick="GameApp.inspectProduct('chips')">
+        <a-box width="0.3" height="0.42" depth="0.15" color="#0284c7"></a-box>
+        <a-plane position="0 -0.2 0.3" rotation="-20 0 0" width="0.75" height="0.22" color="#0f172a">
+          <a-text value="Potato Chips\nRs.60 [WANT]" align="center" position="0 0 0.01" width="1.7" color="#f472b6"></a-text>
+        </a-plane>
+      </a-entity>
+
+      <!-- Product 15: Pure Packaged Water (Need) -->
+      <a-entity position="0.8 1.4 0.8" class="clickable interactive-product" onclick="GameApp.inspectProduct('water')">
+        <a-cylinder radius="0.1" height="0.38" color="#38bdf8"></a-cylinder>
+        <a-plane position="0 -0.2 0.3" rotation="-20 0 0" width="0.75" height="0.22" color="#0f172a">
+          <a-text value="Water (1L x 2)\nRs.40 [NEED]" align="center" position="0 0 0.01" width="1.7" color="#34d399"></a-text>
+        </a-plane>
+      </a-entity>
+
+      <!-- Product 16: Luxury Sparkling Drink (Want) -->
+      <a-entity position="0.8 1.4 2.0" class="clickable interactive-product" onclick="GameApp.inspectProduct('soda')">
+        <a-cylinder radius="0.09" height="0.35" color="#e11d48"></a-cylinder>
+        <a-plane position="0 -0.2 0.3" rotation="-20 0 0" width="0.75" height="0.22" color="#0f172a">
+          <a-text value="Luxury Sparkling\nRs.180 [WANT]" align="center" position="0 0 0.01" width="1.7" color="#f472b6"></a-text>
+        </a-plane>
+      </a-entity>
+    </a-entity>
+
+
+    <!-- AISLE 5 (CENTER-RIGHT FRONT): PERSONAL CARE -->
+    <a-entity id="aisle-personal" position="4 0 10">
+      <a-plane position="0 3.8 0" rotation="0 90 0" width="4.5" height="0.8" color="#0d9488" material="roughness: 0.3">
+        <a-text value="SECTION 5: PERSONAL CARE" align="center" position="0 0 0.02" width="6" color="#99f6e4"></a-text>
+      </a-plane>
+      <a-box position="0 1.2 0" width="1.2" height="2.4" depth="5.5" color="#1e293b"></a-box>
+      <a-box position="0 0.6 0" width="1.5" height="0.06" depth="5.4" color="#334155"></a-box>
+      <a-box position="0 1.2 0" width="1.5" height="0.06" depth="5.4" color="#334155"></a-box>
+      <a-box position="0 1.8 0" width="1.5" height="0.06" depth="5.4" color="#334155"></a-box>
+
+      <!-- Product 17: Herbal Bath Soap 3-pack (Need) -->
+      <a-entity position="-0.8 1.4 -1.8" class="clickable interactive-product" onclick="GameApp.inspectProduct('soap')">
+        <a-box width="0.32" height="0.22" depth="0.2" color="#10b981"></a-box>
+        <a-plane position="0 -0.2 -0.3" rotation="-20 180 0" width="0.75" height="0.22" color="#0f172a">
+          <a-text value="Soap 3-Pack\nRs.85 [NEED]" align="center" position="0 0 0.01" width="1.7" color="#34d399"></a-text>
+        </a-plane>
+      </a-entity>
+
+      <!-- Product 18: Family Toothpaste Pack (Need) -->
+      <a-entity position="-0.8 1.4 -0.5" class="clickable interactive-product" onclick="GameApp.inspectProduct('toothpaste')">
+        <a-box width="0.12" height="0.1" depth="0.4" color="#ef4444"></a-box>
+        <a-plane position="0 -0.2 -0.3" rotation="-20 180 0" width="0.75" height="0.22" color="#0f172a">
+          <a-text value="Toothpaste (200g)\nRs.95 [NEED]" align="center" position="0 0 0.01" width="1.7" color="#34d399"></a-text>
+        </a-plane>
+      </a-entity>
+
+      <!-- Product 19: Hair Shampoo (Need) -->
+      <a-entity position="-0.8 1.4 0.8" class="clickable interactive-product" onclick="GameApp.inspectProduct('shampoo')">
+        <a-cylinder radius="0.1" height="0.4" color="#6366f1"></a-cylinder>
+        <a-plane position="0 -0.2 -0.3" rotation="-20 180 0" width="0.75" height="0.22" color="#0f172a">
+          <a-text value="Shampoo (400ml)\nRs.210 [NEED]" align="center" position="0 0 0.01" width="1.7" color="#34d399"></a-text>
+        </a-plane>
+      </a-entity>
+
+      <!-- Product 20: French Designer Perfume (Want - Expensive) -->
+      <a-entity position="-0.8 1.4 2.0" class="clickable interactive-product" onclick="GameApp.inspectProduct('perfume')">
+        <a-cylinder radius="0.11" height="0.3" color="#f43f5e" material="roughness: 0.1; metalness: 0.6"></a-cylinder>
+        <a-plane position="0 -0.2 -0.3" rotation="-20 180 0" width="0.75" height="0.22" color="#0f172a">
+          <a-text value="Designer Perfume\nRs.1,450 [WANT]" align="center" position="0 0 0.01" width="1.7" color="#f472b6"></a-text>
+        </a-plane>
+      </a-entity>
+    </a-entity>
+
+
+    <!-- AISLE 6 (CENTER-RIGHT BACK): HOUSEHOLD ESSENTIALS -->
+    <a-entity id="aisle-household" position="4 0 -6">
+      <a-plane position="0 3.8 0" rotation="0 90 0" width="4.5" height="0.8" color="#4338ca" material="roughness: 0.3">
+        <a-text value="SECTION 6: HOUSEHOLD ESSENTIALS" align="center" position="0 0 0.02" width="6" color="#c7d2fe"></a-text>
+      </a-plane>
+      <a-box position="0 1.2 0" width="1.2" height="2.4" depth="5.5" color="#1e293b"></a-box>
+      <a-box position="0 0.6 0" width="1.5" height="0.06" depth="5.4" color="#334155"></a-box>
+      <a-box position="0 1.2 0" width="1.5" height="0.06" depth="5.4" color="#334155"></a-box>
+      <a-box position="0 1.8 0" width="1.5" height="0.06" depth="5.4" color="#334155"></a-box>
+
+      <!-- Product 21: Dishwash Gel (Need) -->
+      <a-entity position="-0.8 1.4 -1.8" class="clickable interactive-product" onclick="GameApp.inspectProduct('dishwash')">
+        <a-cylinder radius="0.12" height="0.38" color="#eab308"></a-cylinder>
+        <a-plane position="0 -0.2 -0.3" rotation="-20 180 0" width="0.75" height="0.22" color="#0f172a">
+          <a-text value="Dishwash Gel\nRs.115 [NEED]" align="center" position="0 0 0.01" width="1.7" color="#34d399"></a-text>
+        </a-plane>
+      </a-entity>
+
+      <!-- Product 22: Laundry Detergent (Need) -->
+      <a-entity position="-0.8 1.4 -0.5" class="clickable interactive-product" onclick="GameApp.inspectProduct('detergent')">
+        <a-box width="0.34" height="0.48" depth="0.22" color="#0284c7"></a-box>
+        <a-plane position="0 -0.2 -0.3" rotation="-20 180 0" width="0.75" height="0.22" color="#0f172a">
+          <a-text value="Detergent (2kg)\nRs.260 [NEED]" align="center" position="0 0 0.01" width="1.7" color="#34d399"></a-text>
+        </a-plane>
+      </a-entity>
+
+      <!-- Product 23: Floor Cleaning Mop (Need) -->
+      <a-entity position="-0.8 1.4 0.8" class="clickable interactive-product" onclick="GameApp.inspectProduct('mop')">
+        <a-cylinder radius="0.04" height="0.7" color="#3b82f6"></a-cylinder>
+        <a-plane position="0 -0.2 -0.3" rotation="-20 180 0" width="0.75" height="0.22" color="#0f172a">
+          <a-text value="Floor Mop\nRs.280 [NEED]" align="center" position="0 0 0.01" width="1.7" color="#34d399"></a-text>
+        </a-plane>
+      </a-entity>
+
+      <!-- Product 24: Automatic Aromatherapy Diffuser (Want) -->
+      <a-entity position="-0.8 1.4 2.0" class="clickable interactive-product" onclick="GameApp.inspectProduct('diffuser')">
+        <a-cylinder radius="0.14" height="0.35" color="#ec4899"></a-cylinder>
+        <a-plane position="0 -0.2 -0.3" rotation="-20 180 0" width="0.75" height="0.22" color="#0f172a">
+          <a-text value="Scent Diffuser\nRs.590 [WANT]" align="center" position="0 0 0.01" width="1.7" color="#f472b6"></a-text>
+        </a-plane>
+      </a-entity>
+    </a-entity>
+
+
+    <!-- AISLE 7 (FAR-RIGHT FRONT): STATIONERY & SCHOOL SUPPLIES -->
+    <a-entity id="aisle-stationery" position="12 0 10">
+      <a-plane position="0 3.8 0" rotation="0 90 0" width="4.5" height="0.8" color="#c2410c" material="roughness: 0.3">
+        <a-text value="SECTION 7: SCHOOL & STATIONERY" align="center" position="0 0 0.02" width="6" color="#fed7aa"></a-text>
+      </a-plane>
+      <a-box position="0 1.2 0" width="1.2" height="2.4" depth="5.5" color="#1e293b"></a-box>
+      <a-box position="0 0.6 0" width="1.5" height="0.06" depth="5.4" color="#334155"></a-box>
+      <a-box position="0 1.2 0" width="1.5" height="0.06" depth="5.4" color="#334155"></a-box>
+      <a-box position="0 1.8 0" width="1.5" height="0.06" depth="5.4" color="#334155"></a-box>
+
+      <!-- Product 25: 5-Pack Long Notebooks (Need) -->
+      <a-entity position="-0.8 1.4 -1.8" class="clickable interactive-product" onclick="GameApp.inspectProduct('notebooks')">
+        <a-box width="0.32" height="0.45" depth="0.18" color="#2563eb"></a-box>
+        <a-plane position="0 -0.2 -0.3" rotation="-20 180 0" width="0.75" height="0.22" color="#0f172a">
+          <a-text value="Notebooks 5-Pack\nRs.180 [NEED]" align="center" position="0 0 0.01" width="1.7" color="#34d399"></a-text>
+        </a-plane>
+      </a-entity>
+
+      <!-- Product 26: Smooth Gel Ballpoint Pens (Need) -->
+      <a-entity position="-0.8 1.4 -0.5" class="clickable interactive-product" onclick="GameApp.inspectProduct('pens')">
+        <a-box width="0.2" height="0.35" depth="0.1" color="#1e40af"></a-box>
+        <a-plane position="0 -0.2 -0.3" rotation="-20 180 0" width="0.75" height="0.22" color="#0f172a">
+          <a-text value="Pens Pack (5x)\nRs.60 [NEED]" align="center" position="0 0 0.01" width="1.7" color="#34d399"></a-text>
+        </a-plane>
+      </a-entity>
+
+      <!-- Product 27: Scientific Calculator (Need for School) -->
+      <a-entity position="-0.8 1.4 0.8" class="clickable interactive-product" onclick="GameApp.inspectProduct('calculator')">
+        <a-box width="0.22" height="0.35" depth="0.08" color="#374151"></a-box>
+        <a-plane position="0 -0.2 -0.3" rotation="-20 180 0" width="0.75" height="0.22" color="#0f172a">
+          <a-text value="Calculator\nRs.480 [NEED]" align="center" position="0 0 0.01" width="1.7" color="#34d399"></a-text>
+        </a-plane>
+      </a-entity>
+
+      <!-- Product 28: LED RGB Gaming School Backpack (Want - Expensive) -->
+      <a-entity position="-0.8 1.4 2.0" class="clickable interactive-product" onclick="GameApp.inspectProduct('backpack')">
+        <a-box width="0.36" height="0.52" depth="0.28" color="#9333ea" material="roughness: 0.3; metalness: 0.4"></a-box>
+        <a-plane position="0 -0.2 -0.3" rotation="-20 180 0" width="0.75" height="0.22" color="#0f172a">
+          <a-text value="LED RGB Backpack\nRs.1,850 [WANT]" align="center" position="0 0 0.01" width="1.7" color="#f472b6"></a-text>
+        </a-plane>
+      </a-entity>
+    </a-entity>
+
+
+    <!-- AISLE 8 (FAR-RIGHT BACK): EMERGENCY & HEALTH ESSENTIALS -->
+    <a-entity id="aisle-health" position="12 0 -6">
+      <a-plane position="0 3.8 0" rotation="0 90 0" width="4.5" height="0.8" color="#dc2626" material="roughness: 0.3">
+        <a-text value="SECTION 8: FIRST AID & HEALTH" align="center" position="0 0 0.02" width="6" color="#fecaca"></a-text>
+      </a-plane>
+      <a-box position="0 1.2 0" width="1.2" height="2.4" depth="5.5" color="#1e293b"></a-box>
+      <a-box position="0 0.6 0" width="1.5" height="0.06" depth="5.4" color="#334155"></a-box>
+      <a-box position="0 1.2 0" width="1.5" height="0.06" depth="5.4" color="#334155"></a-box>
+      <a-box position="0 1.8 0" width="1.5" height="0.06" depth="5.4" color="#334155"></a-box>
+
+      <!-- Product 29: Family First Aid Kit (Need) -->
+      <a-entity position="-0.8 1.4 -1.8" class="clickable interactive-product" onclick="GameApp.inspectProduct('firstaid')">
+        <a-box width="0.38" height="0.3" depth="0.2" color="#ffffff"></a-box>
+        <!-- Red Cross on Box -->
+        <a-box position="0 0 -0.11" width="0.06" height="0.18" depth="0.01" color="#dc2626"></a-box>
+        <a-box position="0 0 -0.11" width="0.18" height="0.06" depth="0.01" color="#dc2626"></a-box>
+        <a-plane position="0 -0.2 -0.3" rotation="-20 180 0" width="0.75" height="0.22" color="#0f172a">
+          <a-text value="First Aid Kit\nRs.390 [NEED]" align="center" position="0 0 0.01" width="1.7" color="#34d399"></a-text>
+        </a-plane>
+      </a-entity>
+
+      <!-- Product 30: Paracetamol Relief (Need) -->
+      <a-entity position="-0.8 1.4 -0.5" class="clickable interactive-product" onclick="GameApp.inspectProduct('paracetamol')">
+        <a-box width="0.22" height="0.14" depth="0.06" color="#38bdf8"></a-box>
+        <a-plane position="0 -0.2 -0.3" rotation="-20 180 0" width="0.75" height="0.22" color="#0f172a">
+          <a-text value="Paracetamol Meds\nRs.45 [NEED]" align="center" position="0 0 0.01" width="1.7" color="#34d399"></a-text>
+        </a-plane>
+      </a-entity>
+
+      <!-- Product 31: Antiseptic Liquid Dettol (Need) -->
+      <a-entity position="-0.8 1.4 0.8" class="clickable interactive-product" onclick="GameApp.inspectProduct('antiseptic')">
+        <a-cylinder radius="0.1" height="0.35" color="#b45309"></a-cylinder>
+        <a-plane position="0 -0.2 -0.3" rotation="-20 180 0" width="0.75" height="0.22" color="#0f172a">
+          <a-text value="Antiseptic Liquid\nRs.160 [NEED]" align="center" position="0 0 0.01" width="1.7" color="#34d399"></a-text>
+        </a-plane>
+      </a-entity>
+
+      <!-- Product 32: Smart Bluetooth Fitness Ring (Want - Expensive) -->
+      <a-entity position="-0.8 1.4 2.0" class="clickable interactive-product" onclick="GameApp.inspectProduct('fitnessring')">
+        <a-torus radius="0.09" radius-tubular="0.02" color="#38bdf8" material="roughness: 0.1; metalness: 0.9"></a-torus>
+        <a-plane position="0 -0.2 -0.3" rotation="-20 180 0" width="0.75" height="0.22" color="#0f172a">
+          <a-text value="Smart Fitness Ring\nRs.2,999 [WANT]" align="center" position="0 0 0.01" width="1.7" color="#f472b6"></a-text>
+        </a-plane>
+      </a-entity>
+    </a-entity>
+
+
+    <!-- ========================================== -->
+    <!-- CENTRAL ATTRACTIONS & CHALLENGE STATIONS   -->
+    <!-- ========================================== -->
+
+    <!-- IMPULSE BUYING PROMOTIONAL KIOSK (CENTRAL AISLE) -->
+    <a-entity id="promo-kiosk" position="0 0 2">
+      <!-- Pedestal / Stand -->
+      <a-cylinder position="0 0.6 0" radius="0.9" height="1.2" color="#ef4444" material="roughness: 0.3"></a-cylinder>
+      <!-- Glowing Promotion Signboard -->
+      <a-box position="0 2.2 0" width="1.8" height="0.9" depth="0.1" color="#111827"
+        class="clickable" onclick="GameApp.openImpulseModal()">
+        <a-plane position="0 0 0.06" width="1.7" height="0.8" color="#ef4444" material="emissive: #ef4444; emissiveIntensity: 0.3;">
+          <a-text value="🔥 FLASH DEAL!\nBUY 2 GET 1 FREE!\nMega Chocolates Rs.650" align="center" position="0 0 0.01" width="2.4" color="#ffffff"></a-text>
+        </a-plane>
+      </a-box>
+      <!-- 3D Gift Box Prop on Stand -->
+      <a-box position="0 1.4 0" width="0.55" height="0.4" depth="0.45" color="#b91c1c"
+        class="clickable" onclick="GameApp.openImpulseModal()">
+        <!-- Golden Ribbon -->
+        <a-box position="0 0 0" width="0.56" height="0.41" depth="0.08" color="#fbbf24"></a-box>
+        <a-box position="0 0 0" width="0.08" height="0.41" depth="0.46" color="#fbbf24"></a-box>
+      </a-box>
+    </a-entity>
+
+
+    <!-- FUTURE SAVINGS DEPOSIT KIOSK (BICYCLE GOAL) -->
+    <a-entity id="savings-kiosk" position="-8 0 16">
+      <a-cylinder position="0 0.6 0" radius="0.6" height="1.2" color="#f59e0b" material="roughness: 0.4"></a-cylinder>
+      <a-plane position="0 1.9 0" rotation="0 45 0" width="1.4" height="0.8" color="#0f172a"
+        class="clickable" onclick="GameApp.openSavingsModal()">
+        <a-text value="🚲 BICYCLE FUND\nGoal: Rs.2,000\n[CLICK TO DEPOSIT]" align="center" position="0 0 0.02" width="2.4" color="#fbbf24"></a-text>
+      </a-plane>
+      <!-- Golden Piggy Bank / Vault Sphere -->
+      <a-sphere position="0 1.35 0" radius="0.25" color="#fbbf24" material="metalness: 0.8; roughness: 0.2"
+        class="clickable" onclick="GameApp.openSavingsModal()">
+      </a-sphere>
+    </a-entity>
+
+
+    <!-- FINLEY: 3D FLOATING AI FINANCIAL GUIDE AVATAR -->
+    <a-entity id="finley-avatar" position="3 1.8 15" rotation="0 -35 0"
+      animation="property: position; to: 3 2.0 15; dir: alternate; dur: 2200; loop: true; easing: easeInOutSine">
+      <!-- Hologram Bot Body -->
+      <a-sphere radius="0.28" color="#38bdf8" material="roughness: 0.1; metalness: 0.8; emissive: #0284c7; emissiveIntensity: 0.5;">
+        <!-- Glowing Visor Eye -->
+        <a-box position="0 0.04 0.22" width="0.32" height="0.1" depth="0.06" color="#e0f2fe" material="emissive: #ffffff; emissiveIntensity: 0.9;"></a-box>
+      </a-sphere>
+      <!-- Energy Ring around Finley -->
+      <a-torus radius="0.38" radius-tubular="0.015" color="#38bdf8" rotation="75 0 0"
+        animation="property: rotation; to: 75 360 0; dur: 4000; loop: true; easing: linear">
+      </a-torus>
+      <!-- Chat Bubble -->
+      <a-plane position="0 0.65 0" width="2.2" height="0.5" color="#0f172a" material="opacity: 0.9; transparent: true"
+        class="clickable" onclick="GameApp.showFinleyAdvice()">
+        <a-text id="finley-speech-bubble" value="FINLEY: 'Shop essentials first!\nCheck your Mission (M).'"
+          align="center" position="0 0 0.01" width="2.2" color="#38bdf8"></a-text>
+      </a-plane>
+    </a-entity>
+
+
+    <!-- ========================================== -->
+    <!-- CHECKOUT COUNTER & BILLING TERMINAL        -->
+    <!-- ========================================== -->
+    <a-entity id="checkout-zone" position="0 0 -16">
+      <!-- Checkout Counter Belt Table -->
+      <a-box position="0 0.5 0" width="5.5" height="1.0" depth="1.4" color="#1e293b" material="roughness: 0.6"></a-box>
+      <!-- Conveyor Belt Surface -->
+      <a-box position="0 1.02 0" width="5.2" height="0.04" depth="1.1" color="#0f172a"></a-box>
+
+      <!-- Cashier POS Register & Scanner Screen -->
+      <a-box position="0 1.45 0" width="1.2" height="0.7" depth="0.1" rotation="-15 0 0" color="#111827"
+        class="clickable" onclick="GameApp.openCheckoutModal()">
+        <a-plane position="0 0 0.06" width="1.1" height="0.6" color="#0284c7">
+          <a-text value="CHECKOUT TERMINAL\n[CLICK HERE TO PAY]" align="center" position="0 0 0.02" width="2.5" color="#ffffff"></a-text>
+        </a-plane>
+      </a-box>
+
+      <!-- Overhead Illuminated Lane 1 Beacon -->
+      <a-box position="0 4.2 0" width="3.2" height="0.7" depth="0.15" color="#0f172a">
+        <a-plane position="0 0 0.09" width="3.0" height="0.55" color="#10b981" material="emissive: #10b981; emissiveIntensity: 0.4;">
+          <a-text value="LANE 1 - CHECKOUT OPEN" align="center" position="0 0 0.01" width="4.5" color="#000000"></a-text>
+        </a-plane>
+      </a-box>
+      <!-- Green Lane Light Indicator Sphere -->
+      <a-sphere position="0 4.8 0" radius="0.18" color="#10b981" material="emissive: #10b981; emissiveIntensity: 0.9;"></a-sphere>
+    </a-entity>
+
+  </a-scene>
+
+
+  <!-- ========================================== -->
+  <!-- COMPLETE JAVASCRIPT GAME LOGIC & SOUND     -->
+  <!-- ========================================== -->
+  <script>
+    /* Web Audio API Sound Synthesizer (Zero External Dependencies) */
+    const SoundFX = {
+      ctx: null,
+      init() {
+        if (!this.ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          if (AudioContext) this.ctx = new AudioContext();
+        }
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      },
+      beep(freq = 880, duration = 0.1, type = 'sine') {
+        try {
+          this.init();
+          if (!this.ctx) return;
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = type;
+          osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+          gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start();
+          osc.stop(this.ctx.currentTime + duration);
+        } catch(e){}
+      },
+      click() {
+        this.beep(600, 0.05, 'triangle');
+      },
+      success() {
+        try {
+          this.init();
+          if (!this.ctx) return;
+          const notes = [523.25, 659.25, 783.99, 1046.50]; // C E G C
+          notes.forEach((freq, idx) => {
+            setTimeout(() => this.beep(freq, 0.18, 'sine'), idx * 80);
+          });
+        } catch(e){}
+      },
+      error() {
+        try {
+          this.init();
+          if (!this.ctx) return;
+          this.beep(220, 0.25, 'sawtooth');
+          setTimeout(() => this.beep(180, 0.35, 'sawtooth'), 150);
+        } catch(e){}
+      },
+      chaching() {
+        try {
+          this.init();
+          if (!this.ctx) return;
+          // Metallic register chime
+          this.beep(987.77, 0.1, 'sine');
+          setTimeout(() => this.beep(1318.51, 0.35, 'triangle'), 80);
+        } catch(e){}
+      },
+      siren() {
+        try {
+          this.init();
+          if (!this.ctx) return;
+          this.beep(440, 0.2, 'sawtooth');
+          setTimeout(() => this.beep(660, 0.2, 'sawtooth'), 220);
+          setTimeout(() => this.beep(440, 0.2, 'sawtooth'), 440);
+        } catch(e){}
+      }
+    };
+
+    /* PRODUCTS CATALOG DATABASE (32 Realistic Indian Supermarket Items) */
+    const PRODUCTS_DB = {
+      apples: {
+        id: 'apples', name: 'Fresh Apples', category: 'Fruits & Vegetables',
+        price: 140, qty: '1 kg', type: 'NEED',
+        desc: 'Fresh orchard apples loaded with antioxidants and dietary fiber. A healthy staple for the entire family.'
+      },
+      bananas: {
+        id: 'bananas', name: 'Farm Fresh Bananas', category: 'Fruits & Vegetables',
+        price: 60, qty: '1 Dozen', type: 'NEED',
+        desc: 'Natural source of potassium and instant energy. High nutritional value at an economical cost.'
+      },
+      potatoes: {
+        id: 'potatoes', name: 'Farm Potatoes', category: 'Fruits & Vegetables',
+        price: 70, qty: '2 kg', type: 'NEED',
+        desc: 'Long-lasting carbohydrate kitchen staple for multiple nutritious home meals.'
+      },
+      avocados: {
+        id: 'avocados', name: 'Exotic Imported Avocados', category: 'Fruits & Vegetables',
+        price: 380, qty: '2 pcs', type: 'WANT',
+        desc: 'Imported luxury fruit. Highly nutritious but carries a steep price markup compared to seasonal local fruits.'
+      },
+      milk: {
+        id: 'milk', name: 'Fresh Toned Milk', category: 'Dairy & Chilled',
+        price: 56, qty: '1 Litre', type: 'NEED',
+        desc: 'Crucial daily household source of calcium, protein, and bone health nutrients.'
+      },
+      curd: {
+        id: 'curd', name: 'Fresh Curd (Dahi)', category: 'Dairy & Chilled',
+        price: 40, qty: '500g', type: 'NEED',
+        desc: 'Probiotic-rich fermented curd essential for healthy digestion.'
+      },
+      butter: {
+        id: 'butter', name: 'Table Butter', category: 'Dairy & Chilled',
+        price: 110, qty: '200g', type: 'NEED',
+        desc: 'Essential cooking and breakfast spread for balanced energy.'
+      },
+      cheese: {
+        id: 'cheese', name: 'Artisanal Truffle Cheese', category: 'Dairy & Chilled',
+        price: 620, qty: '150g', type: 'WANT',
+        desc: 'Imported gourmet specialty cheese. A luxury indulgence that can quickly drain your grocery budget.'
+      },
+      atta: {
+        id: 'atta', name: 'Whole Wheat Atta', category: 'Grains & Cereals',
+        price: 230, qty: '5 kg', type: 'NEED',
+        desc: 'High-fiber unrefined wheat flour to prepare daily chapatis/rotis for household survival.'
+      },
+      oats: {
+        id: 'oats', name: 'Rolled Breakfast Oats', category: 'Grains & Cereals',
+        price: 160, qty: '1 kg', type: 'NEED',
+        desc: 'Heart-healthy whole grain that provides long-lasting breakfast energy.'
+      },
+      cereal: {
+        id: 'cereal', name: 'Sugary Choco Loops Kids Cereal', category: 'Grains & Cereals',
+        price: 320, qty: '350g', type: 'WANT',
+        desc: 'Processed high-sugar breakfast snack with heavy cartoon packaging markup.'
+      },
+      biscuits: {
+        id: 'biscuits', name: 'Whole Wheat Marie Biscuits', category: 'Snacks & Beverages',
+        price: 45, qty: '300g', type: 'NEED',
+        desc: 'Economical low-sugar tea snack for the entire family.'
+      },
+      chips: {
+        id: 'chips', name: 'Crunchy Salted Potato Chips', category: 'Snacks & Beverages',
+        price: 60, qty: '1 Big Pack', type: 'WANT',
+        desc: 'Processed junk food snack with zero nutritional value. Fun to eat, but an optional want.'
+      },
+      water: {
+        id: 'water', name: 'Packaged Pure Drinking Water', category: 'Snacks & Beverages',
+        price: 40, qty: '1L x 2 Bottles', type: 'NEED',
+        desc: 'Essential clean safe hydration for emergency travel or pantry storage.'
+      },
+      soda: {
+        id: 'soda', name: 'Luxury Sparkling Energy Fizz', category: 'Snacks & Beverages',
+        price: 180, qty: '330ml Can', type: 'WANT',
+        desc: 'High-priced caffeinated fizzy drink. 4 times the price of pure drinking water.'
+      },
+      soap: {
+        id: 'soap', name: 'Herbal Bath Soap (Pack of 3)', category: 'Personal Care',
+        price: 85, qty: '3 Bars', type: 'NEED',
+        desc: 'Basic sanitation and disease prevention essential for every family member.'
+      },
+      toothpaste: {
+        id: 'toothpaste', name: 'Family Fluoride Toothpaste', category: 'Personal Care',
+        price: 95, qty: '200g', type: 'NEED',
+        desc: 'Dental hygiene protection to prevent costly future dental cavities.'
+      },
+      shampoo: {
+        id: 'shampoo', name: 'Nourishing Hair Shampoo', category: 'Personal Care',
+        price: 210, qty: '400ml', type: 'NEED',
+        desc: 'Standard scalp and hair cleaning bottle that lasts several weeks.'
+      },
+      perfume: {
+        id: 'perfume', name: 'Designer Parisian Perfume', category: 'Personal Care',
+        price: 1450, qty: '50ml', type: 'WANT',
+        desc: 'High-end luxury fragrance. While smelling nice is pleasant, ₹1,450 represents 15% of your total budget!'
+      },
+      dishwash: {
+        id: 'dishwash', name: 'Dishwash Cleaning Gel', category: 'Household Essentials',
+        price: 115, qty: '750ml', type: 'NEED',
+        desc: 'Anti-bacterial grease removal detergent to keep cooking cookware hygienic.'
+      },
+      detergent: {
+        id: 'detergent', name: 'Laundry Detergent Powder', category: 'Household Essentials',
+        price: 260, qty: '2 kg', type: 'NEED',
+        desc: 'Essential for washing and sanitizing school uniforms and daily clothes.'
+      },
+      mop: {
+        id: 'mop', name: 'Microfiber Floor Cleaning Mop', category: 'Household Essentials',
+        price: 280, qty: '1 Unit', type: 'NEED',
+        desc: 'Durable cleaning tool required to maintain clean hygienic home floors.'
+      },
+      diffuser: {
+        id: 'diffuser', name: 'Aromatherapy Room Mist Diffuser', category: 'Household Essentials',
+        price: 590, qty: '1 Device', type: 'WANT',
+        desc: 'Pleasant decorative room scent machine. Totally optional luxury lifestyle purchase.'
+      },
+      notebooks: {
+        id: 'notebooks', name: '5-Pack Long Ruled Notebooks', category: 'School & Stationery',
+        price: 180, qty: '5 Notebooks', type: 'NEED',
+        desc: 'Basic educational equipment for homework, math exercises, and school lessons.'
+      },
+      pens: {
+        id: 'pens', name: 'Smooth Gel Ballpoint Pens (Pack of 5)', category: 'School & Stationery',
+        price: 60, qty: '5 Pens', type: 'NEED',
+        desc: 'Necessary daily stationery for exams and notes.'
+      },
+      calculator: {
+        id: 'calculator', name: 'Student Scientific Calculator', category: 'School & Stationery',
+        price: 480, qty: '1 Unit', type: 'NEED',
+        desc: 'Long-term educational investment for high school mathematics and physics.'
+      },
+      backpack: {
+        id: 'backpack', name: 'LED RGB Gamer School Backpack', category: 'School & Stationery',
+        price: 1850, qty: '1 Unit', type: 'WANT',
+        desc: 'Flashy backpack with glowing lights and logos. Carries the same books as a ₹400 standard bag.'
+      },
+      firstaid: {
+        id: 'firstaid', name: 'Family First Aid Kit', category: 'First Aid & Health',
+        price: 390, qty: 'Complete Box', type: 'NEED',
+        desc: 'Emergency bandages, gauze, antiseptic wipes, and burn creams. Essential home safety precaution.'
+      },
+      paracetamol: {
+        id: 'paracetamol', name: 'Paracetamol & Fever Relief', category: 'First Aid & Health',
+        price: 45, qty: '1 Strip (10 tabs)', type: 'NEED',
+        desc: 'Immediate over-the-counter fever and pain management medicine.'
+      },
+      antiseptic: {
+        id: 'antiseptic', name: 'Antiseptic Liquid Disinfectant', category: 'First Aid & Health',
+        price: 160, qty: '500ml Bottle', type: 'NEED',
+        desc: 'Proven wound cleaner and household surface sanitizer to prevent infections.'
+      },
+      fitnessring: {
+        id: 'fitnessring', name: 'Smart Bluetooth Fitness Ring', category: 'First Aid & Health',
+        price: 2999, qty: '1 Ring', type: 'WANT',
+        desc: 'High-tech biometric wearable gadget. While trendy, spending ₹2,999 consumes 30% of your budget!'
+      }
+    };
+
+    /* UNEXPECTED REAL-LIFE EXPENSES POOL */
+    const UNEXPECTED_EVENTS_POOL = [
+      {
+        id: 'elec_bill',
+        title: '⚡ Electricity Bill Arrived!',
+        name: 'Urgent Electricity Bill',
+        amount: 850,
+        desc: "Your family's monthly electricity bill has arrived. Power will be disconnected if unpaid today!"
+      },
+      {
+        id: 'med_emergency',
+        title: '🩺 Medical Clinic Visit!',
+        name: 'Sudden Medical Treatment',
+        amount: 1200,
+        desc: "A sudden illness required a doctor consultation and urgent prescription medicine for a family member."
+      },
+      {
+        id: 'school_fee',
+        title: '📚 Mandatory School Supplies!',
+        name: 'School Project Fee',
+        amount: 500,
+        desc: "A mandatory science project fee and lab manual must be submitted to school tomorrow morning."
+      },
+      {
+        id: 'transport',
+        title: '🚌 Monthly Bus Pass Increase!',
+        name: 'Transport Commute Cost',
+        amount: 300,
+        desc: "Fuel price hikes increased the monthly student bus transit pass unexpectedly."
+      },
+      {
+        id: 'family_event',
+        title: '🎉 Family Celebration Contribution!',
+        name: 'Family Celebration Gift',
+        amount: 700,
+        desc: "Your cousin's milestone birthday is this weekend. Your family agreed to contribute ₹700 toward the cake and gift."
+      }
+    ];
+
+    /* MAIN GAME CONTROLLER & APPLICATION STATE */
+    const GameApp = {
+      budget: 10000,
+      balance: 10000,
+      cart: [],
+      spent: 0,
+      savings: 0,
+      savingsGoal: 2000,
+      unexpectedTotal: 0,
+      activeProduct: null,
+      
+      // Tracking scores & metrics
+      quizzesAnswered: 0,
+      quizzesCorrect: 0,
+      priceComparisonDone: false,
+      priceComparisonCorrect: false,
+      impulseChoice: null, // 'resisted' or 'bought'
+      unexpectedEventsTriggered: [],
+      unexpectedIndex: 0,
+      unplannedEventInterval: null,
+
+      init() {
+        this.updateHUD();
+        this.bindVRControls();
+      },
+
+      startJourney() {
+        SoundFX.init();
+        SoundFX.success();
+        this.closeAllModals();
+        this.showToast("🚀 Welcome to Moneyverse! Walk to any aisle to begin.", "success");
+        
+        // Schedule random unexpected event after student adds some items or browses
+        setTimeout(() => {
+          this.triggerRandomUnexpectedEvent();
+        }, 45000); // 45 seconds in
+      },
+
+      /* HUD & Realtime Calculation Engine */
+      updateHUD() {
+        // Calculate cart total
+        this.spent = this.cart.reduce((sum, item) => sum + item.price, 0);
+        
+        // Calculate remaining balance
+        this.balance = this.budget - this.spent - this.unexpectedTotal - this.savings;
+        if (this.balance < 0) this.balance = 0;
+
+        // Update Screen HUD
+        const elBal = document.getElementById('hud-balance');
+        const elSpent = document.getElementById('hud-spent');
+        const elSaved = document.getElementById('hud-saved');
+        const elCount = document.getElementById('hud-cart-count');
+
+        if (elBal) elBal.textContent = '₹' + this.balance.toLocaleString('en-IN');
+        if (elSpent) elSpent.textContent = '₹' + this.spent.toLocaleString('en-IN');
+        if (elSaved) elSaved.textContent = '₹' + this.savings.toLocaleString('en-IN');
+        if (elCount) elCount.textContent = this.cart.length;
+
+        // Update 3D VR Floating HUD Text
+        const vrHudText = document.getElementById('vr-hud-text');
+        if (vrHudText) {
+          vrHudText.setAttribute('value', 
+            `BUDGET: Rs.10,000 | BAL: Rs.${this.balance} | CART: ${this.cart.length} | SAVED: Rs.${this.savings}`
+          );
+        }
+
+        // Update 3D Trolley Label
+        const trolleyLabel = document.getElementById('trolley-3d-label');
+        if (trolleyLabel) {
+          trolleyLabel.setAttribute('value', `TROLLEY: ${this.cart.length} Items | Rs.${this.spent}`);
+        }
+
+        // Update 3D Trolley Visual Mini-Products
+        this.updateTrolley3DVisuals();
+      },
+
+      /* 3D Visual representation of products inside trolley basket */
+      updateTrolley3DVisuals() {
+        const spawnContainer = document.getElementById('trolley-items-spawn');
+        if (!spawnContainer) return;
+
+        // Clear existing
+        while (spawnContainer.firstChild) {
+          spawnContainer.removeChild(spawnContainer.firstChild);
+        }
+
+        // Spawn a miniature box/cylinder for each item (up to 12 visible items)
+        const displayLimit = Math.min(this.cart.length, 12);
+        for (let i = 0; i < displayLimit; i++) {
+          const item = this.cart[i];
+          const mini = document.createElement('a-box');
+          
+          // Distribute across basket
+          const row = Math.floor(i / 3);
+          const col = i % 3;
+          const x = (col - 1) * 0.18;
+          const z = (row - 1.5) * 0.18;
+          const y = 0.55 + (Math.random() * 0.08);
+
+          mini.setAttribute('position', `${x} ${y} ${z}`);
+          mini.setAttribute('width', '0.14');
+          mini.setAttribute('height', '0.14');
+          mini.setAttribute('depth', '0.14');
+          mini.setAttribute('color', item.type === 'NEED' ? '#10b981' : '#f43f5e');
+          mini.setAttribute('material', 'roughness: 0.3; metalness: 0.2');
+          spawnContainer.appendChild(mini);
+        }
+      },
+
+      /* Product Inspection Modal */
+      inspectProduct(productId) {
+        SoundFX.click();
+        const p = PRODUCTS_DB[productId];
+        if (!p) return;
+
+        this.activeProduct = p;
+
+        document.getElementById('product-modal-title').textContent = p.name;
+        document.getElementById('product-modal-badge').textContent = p.category;
+        document.getElementById('product-modal-price').textContent = p.price;
+        document.getElementById('product-modal-qty').textContent = '/ ' + p.qty;
+        document.getElementById('product-modal-desc').textContent = p.desc;
+
+        // Reset quiz feedback inside product modal
+        const feedback = document.getElementById('product-quiz-feedback');
+        feedback.style.display = 'none';
+
+        this.openModal('modal-product');
+      },
+
+      closeProductModal() {
+        SoundFX.click();
+        this.closeModal('modal-product');
+        this.activeProduct = null;
+      },
+
+      /* Needs vs Wants Interactive Challenge */
+      answerProductQuiz(selectedType) {
+        if (!this.activeProduct) return;
+        this.quizzesAnswered++;
+
+        const isCorrect = (selectedType === this.activeProduct.type);
+        if (isCorrect) this.quizzesCorrect++;
+
+        const feedback = document.getElementById('product-quiz-feedback');
+        feedback.style.display = 'block';
+
+        if (isCorrect) {
+          SoundFX.success();
+          feedback.style.background = 'rgba(16, 185, 129, 0.2)';
+          feedback.style.border = '1px solid #10b981';
+          feedback.style.color = '#6ee7b7';
+          feedback.innerHTML = `<strong>✅ CORRECT!</strong> ${this.activeProduct.name} is a <strong>${this.activeProduct.type}</strong>. ${this.activeProduct.type === 'NEED' ? 'Essential for family health and survival.' : 'An optional want; prioritizing needs protects your budget.'}`;
+        } else {
+          SoundFX.error();
+          feedback.style.background = 'rgba(239, 68, 68, 0.2)';
+          feedback.style.border = '1px solid #ef4444';
+          feedback.style.color = '#fca5a5';
+          feedback.innerHTML = `<strong>❌ NOT QUITE!</strong> ${this.activeProduct.name} is classified as a <strong>${this.activeProduct.type}</strong>. Remember: Needs are things required for living; wants are items we desire for luxury or convenience.`;
+        }
+      },
+
+      /* Add Active Product to Cart with Budget Protection */
+      addCurrentProductToCart() {
+        if (!this.activeProduct) return;
+        const p = this.activeProduct;
+
+        // Check if adding this exceeds available budget
+        const projectedSpent = this.spent + p.price;
+        const projectedRemaining = this.budget - projectedSpent - this.unexpectedTotal - this.savings;
+
+        if (projectedRemaining < 0) {
+          SoundFX.error();
+          this.showToast("Oops! Your shopping cart exceeds your available budget. Review your purchases and make smarter choices.", "danger");
+          return;
+        }
+
+        // Add to cart
+        this.cart.push({ ...p });
+        SoundFX.chaching();
+        this.updateHUD();
+        this.closeProductModal();
+
+        this.showToast(`🛒 Added ${p.name} (₹${p.price}) to trolley!`, "success");
+
+        // Trigger unexpected expense after student has selected 3 items
+        if (this.cart.length === 3 && this.unexpectedEventsTriggered.length === 0) {
+          setTimeout(() => {
+            this.triggerRandomUnexpectedEvent();
+          }, 1200);
+        }
+      },
+
+      /* Remove Item from Cart */
+      removeItemFromCart(index) {
+        SoundFX.click();
+        if (index >= 0 && index < this.cart.length) {
+          const removed = this.cart.splice(index, 1)[0];
+          this.updateHUD();
+          this.renderCartModalItems();
+          this.showToast(`Removed ${removed.name} (+₹${removed.price} refunded)`, "success");
+        }
+      },
+
+      /* Shopping Cart Modal */
+      openCartModal() {
+        SoundFX.click();
+        this.renderCartModalItems();
+        this.openModal('modal-cart');
+      },
+
+      closeCartModal() {
+        SoundFX.click();
+        this.closeModal('modal-cart');
+      },
+
+      renderCartModalItems() {
+        const container = document.getElementById('cart-items-container');
+        if (!container) return;
+
+        if (this.cart.length === 0) {
+          container.innerHTML = `
+            <div style="padding: 24px; text-align: center; color: #94a3b8; font-size: 14px;">
+              Your shopping trolley is empty.<br>Walk down the supermarket aisles to pick up items!
+            </div>
+          `;
+        } else {
+          container.innerHTML = this.cart.map((item, idx) => `
+            <div class="cart-item-row">
+              <div class="cart-item-name">
+                <span class="cart-item-badge ${item.type === 'NEED' ? 'badge-need' : 'badge-want'}">${item.type}</span>
+                <span>${item.name}</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 14px;">
+                <span class="cart-item-price">₹${item.price}</span>
+                <button class="btn-remove-item" onclick="GameApp.removeItemFromCart(${idx})">✕ Remove</button>
+              </div>
+            </div>
+          `).join('');
+        }
+
+        const needsCount = this.cart.filter(i => i.type === 'NEED').length;
+        const wantsCount = this.cart.filter(i => i.type === 'WANT').length;
+
+        document.getElementById('cart-modal-count').textContent = `${this.cart.length} items`;
+        document.getElementById('cart-modal-needs').textContent = `${needsCount} items`;
+        document.getElementById('cart-modal-wants').textContent = `${wantsCount} items`;
+        document.getElementById('cart-modal-total').textContent = this.spent.toLocaleString('en-IN');
+      },
+
+      /* Challenge B: Smart Price Comparison */
+      openComparisonModal() {
+        SoundFX.click();
+        const fb = document.getElementById('comparison-feedback');
+        fb.style.display = 'none';
+        this.openModal('modal-comparison');
+      },
+
+      closeComparisonModal() {
+        SoundFX.click();
+        this.closeModal('modal-comparison');
+      },
+
+      selectPriceComparisonOption(option) {
+        this.priceComparisonDone = true;
+        const fb = document.getElementById('comparison-feedback');
+        fb.style.display = 'block';
+
+        if (option === 'B') {
+          this.priceComparisonCorrect = true;
+          SoundFX.success();
+          fb.style.background = 'rgba(16, 185, 129, 0.2)';
+          fb.style.border = '1px solid #10b981';
+          fb.style.color = '#6ee7b7';
+          fb.innerHTML = `
+            <strong>🏆 EXCELLENT CHOICE! Brand B (₹95) is the Smartest Buy!</strong><br>
+            Brand B offers the exact same grade of premium long-grain rice as Brand A (₹120), without forcing you to pay an extra ₹25 for celebrity endorsements and gold foil packaging. That is true value for money!
+          `;
+          
+          // Optionally add to cart
+          if (!this.cart.some(i => i.name.includes('Basmati Rice (Brand B)'))) {
+            this.cart.push({
+              id: 'rice_b',
+              name: 'Pure Basmati Rice (Brand B)',
+              category: 'Grains & Cereals',
+              price: 95,
+              qty: '1 kg',
+              type: 'NEED',
+              desc: 'Best value smart farm basmati rice.'
+            });
+            this.updateHUD();
+            this.showToast("Added Brand B Basmati Rice (₹95) to cart!", "success");
+          }
+        } else if (option === 'A') {
+          SoundFX.error();
+          fb.style.background = 'rgba(239, 68, 68, 0.2)';
+          fb.style.border = '1px solid #ef4444';
+          fb.style.color = '#fca5a5';
+          fb.innerHTML = `
+            <strong>⚠️ BRAND A IS OVERPRICED (₹120)!</strong><br>
+            You are paying a 26% brand markup solely for flashy advertising. In financial literacy, always compare the unit price and nutritional ingredients before paying for brand hype.
+          `;
+        } else {
+          SoundFX.error();
+          fb.style.background = 'rgba(245, 158, 11, 0.2)';
+          fb.style.border = '1px solid #f59e0b';
+          fb.style.color = '#fde68a';
+          fb.innerHTML = `
+            <strong>⚠️ BRAND C (₹110) IS MEDIOCRE VALUE.</strong><br>
+            While cheaper than Brand A, Brand B at ₹95 provides superior grain length and lower cost. Look closely at price per kilogram!
+          `;
+        }
+      },
+
+      /* Challenge D: Impulse Buying */
+      openImpulseModal() {
+        SoundFX.click();
+        this.openModal('modal-impulse');
+      },
+
+      closeImpulseModal() {
+        SoundFX.click();
+        this.closeModal('modal-impulse');
+      },
+
+      chooseImpulseBuy(buyIt) {
+        if (buyIt) {
+          if (this.balance < 650) {
+            SoundFX.error();
+            this.showToast("Oops! Not enough funds to buy this impulse offer.", "danger");
+            return;
+          }
+          this.impulseChoice = 'bought';
+          this.cart.push({
+            id: 'impulse_choc',
+            name: 'Flash Sale Chocolate Mega Box',
+            category: 'Snacks & Beverages',
+            price: 650,
+            qty: 'Combo Box',
+            type: 'WANT',
+            desc: 'Unplanned impulse purchase influenced by marketing sale banner.'
+          });
+          SoundFX.chaching();
+          this.updateHUD();
+          this.closeImpulseModal();
+          this.showToast("Bought impulse chocolates for ₹650. Notice how it reduced your balance!", "danger");
+        } else {
+          this.impulseChoice = 'resisted';
+          SoundFX.success();
+          this.closeImpulseModal();
+          this.showToast("🏆 Fantastic self-control! You resisted marketing pressure and saved ₹650!", "success");
+        }
+      },
+
+      /* Challenge E: Future Savings Goal (Bicycle) */
+      openSavingsModal() {
+        SoundFX.click();
+        this.updateSavingsModalUI();
+        this.openModal('modal-savings');
+      },
+
+      closeSavingsModal() {
+        SoundFX.click();
+        this.closeModal('modal-savings');
+      },
+
+      allocateSavings(amount) {
+        if (this.balance < amount) {
+          SoundFX.error();
+          this.showToast("Oops! Insufficient balance to allocate this amount to savings.", "danger");
+          return;
+        }
+
+        this.savings = Math.min(this.savings + amount, 3000);
+        SoundFX.chaching();
+        this.updateHUD();
+        this.updateSavingsModalUI();
+        this.showToast(`Deposited ₹${amount} into Bicycle Savings Vault!`, "success");
+      },
+
+      updateSavingsModalUI() {
+        const val = document.getElementById('savings-display-val');
+        const bar = document.getElementById('savings-progress-bar');
+        if (val) val.textContent = this.savings.toLocaleString('en-IN');
+        if (bar) {
+          const pct = Math.min((this.savings / this.savingsGoal) * 100, 100);
+          bar.style.width = pct + '%';
+        }
+      },
+
+      /* Mission Checklist Modal */
+      openMissionModal() {
+        SoundFX.click();
+        this.updateMissionUI();
+        this.openModal('modal-mission');
+      },
+
+      closeMissionModal() {
+        SoundFX.click();
+        this.closeModal('modal-mission');
+      },
+
+      updateMissionUI() {
+        const hasGrain = this.cart.some(i => i.id === 'atta' || i.id === 'rice_b');
+        const hasDairy = this.cart.some(i => i.id === 'milk' || i.id === 'curd');
+        const hasProduce = this.cart.some(i => i.id === 'apples' || i.id === 'bananas' || i.id === 'potatoes');
+        const hasHygiene = this.cart.some(i => i.id === 'soap' || i.id === 'toothpaste');
+        const hasHealth = this.cart.some(i => i.id === 'firstaid' || i.id === 'antiseptic');
+        const hasSavings = this.savings >= 2000;
+
+        document.getElementById('chk-item-grain').innerHTML = (hasGrain ? '✅' : '⬜') + ' <strong>Staple Grain:</strong> Rice or Whole Wheat Atta';
+        document.getElementById('chk-item-dairy').innerHTML = (hasDairy ? '✅' : '⬜') + ' <strong>Dairy:</strong> Fresh Milk or Curd';
+        document.getElementById('chk-item-produce').innerHTML = (hasProduce ? '✅' : '⬜') + ' <strong>Produce:</strong> Fresh Apples, Bananas or Potatoes';
+        document.getElementById('chk-item-hygiene').innerHTML = (hasHygiene ? '✅' : '⬜') + ' <strong>Hygiene:</strong> Bath Soap or Toothpaste';
+        document.getElementById('chk-item-health').innerHTML = (hasHealth ? '✅' : '⬜') + ' <strong>Health Essential:</strong> First Aid Kit or Antiseptic';
+        document.getElementById('chk-item-savings').innerHTML = (hasSavings ? '✅' : '⬜') + ' <strong>Future Goal:</strong> Deposit ₹2,000 for Bicycle Fund';
+      },
+
+      /* Finley Floating Avatar Advice */
+      showFinleyAdvice() {
+        SoundFX.beep(750, 0.1);
+        const tips = [
+          "Always prioritize your survival staples before browsing luxury treats!",
+          "Did you check the grains aisle? Compare brand prices before buying!",
+          "Make sure to keep at least ₹2,000 set aside for your bicycle fund!",
+          "Life throws surprises! Keep a safety buffer in your wallet."
+        ];
+        const randomTip = tips[Math.floor(Math.random() * tips.length)];
+        const bubble = document.getElementById('finley-speech-bubble');
+        if (bubble) bubble.setAttribute('value', `FINLEY: "${randomTip}"`);
+        this.showToast(`🤖 Finley: ${randomTip}`, "success");
+      },
+
+      /* Unexpected Real-Life Expenses Engine */
+      triggerRandomUnexpectedEvent() {
+        if (this.unexpectedEventsTriggered.length >= 2) return; // Limit to 2 per gameplay session
+
+        // Pick an event not yet triggered
+        const available = UNEXPECTED_EVENTS_POOL.filter(e => !this.unexpectedEventsTriggered.includes(e.id));
+        if (available.length === 0) return;
+
+        const event = available[Math.floor(Math.random() * available.length)];
+        this.currentEmergency = event;
+
+        SoundFX.siren();
+
+        document.getElementById('emergency-title').textContent = event.title;
+        document.getElementById('emergency-event-name').textContent = event.name;
+        document.getElementById('emergency-amount').textContent = '₹' + event.amount;
+        document.getElementById('emergency-desc').textContent = event.desc;
+
+        this.openModal('modal-emergency');
+      },
+
+      payUnexpectedExpense() {
+        if (!this.currentEmergency) return;
+
+        const event = this.currentEmergency;
+        this.unexpectedTotal += event.amount;
+        this.unexpectedEventsTriggered.push(event.id);
+
+        SoundFX.error();
+        this.updateHUD();
+        this.closeModal('modal-emergency');
+
+        // Check if balance drops to zero or tight
+        if (this.balance < 500) {
+          this.showToast(`🚨 Paid ₹${event.amount} for ${event.name}. Budget is very low! Consider removing unnecessary items.`, "danger");
+        } else {
+          this.showToast(`Paid ₹${event.amount} for ${event.name}. Financial wallet updated.`, "danger");
+        }
+
+        this.currentEmergency = null;
+      },
+
+      /* Interactive Checkout Counter */
+      openCheckoutModal() {
+        SoundFX.click();
+        this.renderCheckoutSummary();
+        this.openModal('modal-checkout');
+      },
+
+      closeCheckoutModal() {
+        SoundFX.click();
+        this.closeModal('modal-checkout');
+      },
+
+      renderCheckoutSummary() {
+        const listContainer = document.getElementById('checkout-receipt-list');
+        if (!listContainer) return;
+
+        if (this.cart.length === 0) {
+          listContainer.innerHTML = `
+            <div style="padding: 16px; text-align: center; color: #94a3b8; font-size: 13px;">
+              No supermarket items in trolley.
+            </div>
+          `;
+        } else {
+          listContainer.innerHTML = this.cart.map(item => `
+            <div class="cart-item-row" style="padding: 8px 14px;">
+              <div class="cart-item-name" style="font-size: 13px;">
+                <span class="cart-item-badge ${item.type === 'NEED' ? 'badge-need' : 'badge-want'}">${item.type}</span>
+                <span>${item.name}</span>
+              </div>
+              <span class="cart-item-price" style="font-size: 14px;">₹${item.price}</span>
+            </div>
+          `).join('');
+        }
+
+        document.getElementById('checkout-subtotal').textContent = '₹' + this.spent.toLocaleString('en-IN');
+        document.getElementById('checkout-unexpected').textContent = '₹' + this.unexpectedTotal.toLocaleString('en-IN');
+        document.getElementById('checkout-savings').textContent = '₹' + this.savings.toLocaleString('en-IN');
+        document.getElementById('checkout-remaining-balance').textContent = '₹' + this.balance.toLocaleString('en-IN');
+      },
+
+      confirmPaymentAndGenerateReport() {
+        SoundFX.chaching();
+        this.closeCheckoutModal();
+        this.showToast("💳 Transaction confirmed! Generating Personal Financial Report...", "success");
+
+        setTimeout(() => {
+          this.generateFinalFinancialReport();
+        }, 1000);
+      },
+
+      /* Personal Financial Report Evaluation System */
+      generateFinalFinancialReport() {
+        SoundFX.success();
+
+        // 1. Budget Solvency Score (Did player stay positive without debt?)
+        let scoreBudget = 100;
+        if (this.balance < 500) scoreBudget = 70;
+        if (this.balance === 0 && this.spent > 8000) scoreBudget = 60;
+
+        // 2. Needs vs Wants Accuracy (Cart ratio + Quiz accuracy)
+        const needsCount = this.cart.filter(i => i.type === 'NEED').length;
+        const wantsCount = this.cart.filter(i => i.type === 'WANT').length;
+        let scoreNeeds = 80;
+        if (needsCount >= 3 && wantsCount <= 1) scoreNeeds = 100;
+        else if (wantsCount > needsCount) scoreNeeds = 50;
+
+        // Quiz factor
+        if (this.quizzesAnswered > 0) {
+          const quizAccuracy = (this.quizzesCorrect / this.quizzesAnswered) * 100;
+          scoreNeeds = Math.round((scoreNeeds + quizAccuracy) / 2);
+        }
+
+        // 3. Price Comparison
+        let scorePrice = 60;
+        if (this.priceComparisonCorrect) scorePrice = 100;
+        else if (this.priceComparisonDone) scorePrice = 75;
+
+        // 4. Impulse Resistance
+        let scoreImpulse = 80;
+        if (this.impulseChoice === 'resisted') scoreImpulse = 100;
+        else if (this.impulseChoice === 'bought') scoreImpulse = 50;
+
+        // 5. Emergency Management
+        let scoreEmergency = 85;
+        if (this.unexpectedTotal > 0 && this.balance >= 1000) scoreEmergency = 100;
+        else if (this.unexpectedTotal > 0 && this.balance < 300) scoreEmergency = 60;
+
+        // 6. Savings & Future Planning
+        let scoreSavings = Math.round(Math.min((this.savings / this.savingsGoal) * 100, 100));
+
+        // Overall Weighted Score
+        const overallScore = Math.round(
+          (scoreBudget * 0.20) +
+          (scoreNeeds * 0.20) +
+          (scorePrice * 0.15) +
+          (scoreImpulse * 0.15) +
+          (scoreEmergency * 0.15) +
+          (scoreSavings * 0.15)
+        );
+
+        // Tier Assignment
+        let tierName = "KEEP PRACTISING";
+        let tierColor = "#ef4444";
+        let tierBadgeClass = "badge-danger";
+
+        if (overallScore >= 90) {
+          tierName = "🏆 MONEY MASTER";
+          tierColor = "#10b981";
+          tierBadgeClass = "badge-success";
+        } else if (overallScore >= 75) {
+          tierName = "🌟 SMART SPENDER";
+          tierColor = "#38bdf8";
+          tierBadgeClass = "badge-primary";
+        } else if (overallScore >= 60) {
+          tierName = "📈 BUDGET LEARNER";
+          tierColor = "#f59e0b";
+          tierBadgeClass = "badge-warning";
+        }
+
+        // Update Report UI
+        document.getElementById('report-final-score').textContent = overallScore;
+        const tierBadge = document.getElementById('report-tier-badge');
+        tierBadge.textContent = tierName;
+        tierBadge.style.background = tierColor;
+        tierBadge.style.color = (overallScore >= 75) ? '#000000' : '#ffffff';
+
+        // Update Competency Bars
+        document.getElementById('metric-budget-txt').textContent = scoreBudget + '%';
+        document.getElementById('metric-budget-bar').style.width = scoreBudget + '%';
+
+        document.getElementById('metric-needs-txt').textContent = scoreNeeds + '%';
+        document.getElementById('metric-needs-bar').style.width = scoreNeeds + '%';
+
+        document.getElementById('metric-price-txt').textContent = scorePrice + '%';
+        document.getElementById('metric-price-bar').style.width = scorePrice + '%';
+
+        document.getElementById('metric-impulse-txt').textContent = scoreImpulse + '%';
+        document.getElementById('metric-impulse-bar').style.width = scoreImpulse + '%';
+
+        document.getElementById('metric-emergency-txt').textContent = scoreEmergency + '%';
+        document.getElementById('metric-emergency-bar').style.width = scoreEmergency + '%';
+
+        document.getElementById('metric-savings-txt').textContent = scoreSavings + '%';
+        document.getElementById('metric-savings-bar').style.width = scoreSavings + '%';
+
+        // Summary Stats
+        document.getElementById('rep-stat-spent').textContent = '₹' + this.spent.toLocaleString('en-IN');
+        document.getElementById('rep-stat-saved').textContent = '₹' + this.savings.toLocaleString('en-IN');
+        document.getElementById('rep-stat-balance').textContent = '₹' + this.balance.toLocaleString('en-IN');
+
+        // Dynamic Feedback Text
+        const fbText = document.getElementById('report-feedback-text');
+        if (overallScore >= 90) {
+          fbText.innerHTML = `<strong>Exceptional Financial Discipline!</strong> You prioritized essential household nutrition and safety, successfully avoided deceptive marketing traps, paid sudden unexpected bills without debt, and fully secured your ₹2,000 bicycle savings!`;
+        } else if (overallScore >= 75) {
+          fbText.innerHTML = `<strong>Strong Performance!</strong> You handled your money prudently and navigated unexpected expenses well. To become a Money Master, try to resist luxury impulse buys and allocate more toward your future goals first.`;
+        } else {
+          fbText.innerHTML = `<strong>Good Learning Effort!</strong> You completed the journey, but high-priced luxury wants or impulse traps put pressure on your wallet. Focus on distinguishing vital Needs from temporary Wants and maintaining an emergency buffer.`;
+        }
+
+        this.openModal('modal-report');
+      },
+
+      /* Clean Game Restart without Page Reload */
+      restartJourney() {
+        SoundFX.chaching();
+        this.budget = 10000;
+        this.balance = 10000;
+        this.cart = [];
+        this.spent = 0;
+        this.savings = 0;
+        this.unexpectedTotal = 0;
+        this.quizzesAnswered = 0;
+        this.quizzesCorrect = 0;
+        this.priceComparisonDone = false;
+        this.priceComparisonCorrect = false;
+        this.impulseChoice = null;
+        this.unexpectedEventsTriggered = [];
+        this.currentEmergency = null;
+
+        // Reset player rig position to entrance
+        const rig = document.getElementById('rig');
+        if (rig) rig.setAttribute('position', '0 0 16');
+
+        this.updateHUD();
+        this.closeAllModals();
+        this.showToast("🔄 Journey reset! You have a fresh ₹10,000 budget.", "success");
+      },
+
+      /* Toast Notification Helper */
+      showToast(message, type = "info") {
+        const toast = document.getElementById('toast-msg');
+        const text = document.getElementById('toast-text');
+        const icon = document.getElementById('toast-icon');
+        if (!toast || !text) return;
+
+        text.textContent = message;
+        icon.textContent = (type === 'danger') ? '🚨' : (type === 'success' ? '✅' : '💡');
+
+        toast.className = 'show ' + (type === 'danger' ? 'toast-danger' : (type === 'success' ? 'toast-success' : ''));
+        
+        clearTimeout(this._toastTimeout);
+        this._toastTimeout = setTimeout(() => {
+          toast.className = '';
+        }, 4000);
+      },
+
+      /* Modal Helpers */
+      openModal(modalId) {
+        this.closeAllModals();
+        const m = document.getElementById(modalId);
+        if (m) m.classList.add('active');
+      },
+
+      closeModal(modalId) {
+        const m = document.getElementById(modalId);
+        if (m) m.classList.remove('active');
+      },
+
+      closeAllModals() {
+        document.querySelectorAll('.modal-backdrop').forEach(el => el.classList.remove('active'));
+      },
+
+      /* Meta Quest Controller Keybinding & Event Listeners */
+      bindVRControls() {
+        // Keyboard shortcuts for desktop testing
+        window.addEventListener('keydown', (e) => {
+          if (e.key === 'c' || e.key === 'C') {
+            this.openCartModal();
+          } else if (e.key === 'm' || e.key === 'M') {
+            this.openMissionModal();
+          } else if (e.key === 'Escape') {
+            this.closeAllModals();
+          }
+        });
+
+        // Quest Controller Buttons: Left Hand X/Y for Wallet/Cart, Right Hand A/B for Mission
+        const leftCtl = document.getElementById('left-controller');
+        const rightCtl = document.getElementById('right-controller');
+
+        if (leftCtl) {
+          leftCtl.addEventListener('xbuttondown', () => this.openCartModal());
+          leftCtl.addEventListener('ybuttondown', () => this.openMissionModal());
+        }
+
+        if (rightCtl) {
+          rightCtl.addEventListener('abuttondown', () => this.openCartModal());
+          rightCtl.addEventListener('bbuttondown', () => this.openCheckoutModal());
+        }
+      }
+    };
+
+    // Initialize Game on Window Load
+    window.addEventListener('DOMContentLoaded', () => {
+      GameApp.init();
+    });
+  </script>
+
+</body>
+</html>
